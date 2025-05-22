@@ -56,3 +56,8 @@ Thumbs.db
 *.bak
 .pnpm-store/
 coverage/
+
+# ───── Cursor ─────
+.cursor/
+.cursor-cache/
+.cursor-settings.json
