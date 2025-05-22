@@ -5,7 +5,12 @@ from app.core.config import Config
 from app.models.base import Base
 from app.models.user import User
 from app.models.chat import Chat, Message
+import logging
 import time
+
+# 设置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 创建数据库引擎
 engine = create_engine(Config.get_database_url)  # 创建数据库引擎

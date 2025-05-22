@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = ConfigDict(env_file=".env")
     
     # Project
-    PROJECT_NAME: str = "VectorForge"  # Project name
+    PROJECT_NAME: str = "CFLP_RAG"  # Project name
     VERSION: str = "0.1.0"  # Project version
     
     # FastAPI API
@@ -32,26 +32,26 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
     OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL")
-    OPENAI_MODEL: str = "deepseek-chat"
+    OPENAI_GPT_MODEL: str = "gpt-4o-mini"
     MAX_TOKENS: int = 150
     # TEMPERATURE = 0.7
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-large"
     EMBEDDING_DIMENSION: int = 3072
     # Milvus
-    # MILVUS_SERVICE_URI: str = os.getenv("MILVUS_SERVICE_URI")
-    # MILVUS_TOKEN_ROOT: str = os.getenv("MILVUS_TOKEN_ROOT")
-    # MILVUS_TOKEN_USER: str = os.getenv("MILVUS_TOKEN_USER")
-    # MILVUS_COLLECTION_NAME_CFLP: str = "collection_cflp"
-    # MILVUS_DB_NAME_CFLP: str = "database_cflp"
-    # MILVUS_SEARCH_TOP_K: int = 5
+    MILVUS_SERVICE_URI: str = os.getenv("MILVUS_SERVICE_URI")
+    MILVUS_TOKEN_ROOT: str = os.getenv("MILVUS_TOKEN_ROOT")
+    MILVUS_TOKEN_USER: str = os.getenv("MILVUS_TOKEN_USER")
+    MILVUS_COLLECTION_NAME_CFLP: str = "collection_cflp"
+    MILVUS_DB_NAME_CFLP: str = "database_cflp"
+    MILVUS_SEARCH_TOP_K: int = 5
     # conversation_manager
     MAX_CONTENT_LENGTH: int = 4096
     # MySQL
-    MYSQL_HOST: str = os.getenv("MYSQL_HOST", "")
+    MYSQL_HOST: str = os.getenv("MYSQL_HOST", "cflp_mysql_server")
     MYSQL_PORT: int = int(os.getenv("MYSQL_PORT", 3306))
-    MYSQL_USER: str = os.getenv("MYSQL_USER", "")
-    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "")
-    MYSQL_DATABASE: str = "VectorForge"
+    MYSQL_USER: str = os.getenv("MYSQL_USER", "dthghjc")
+    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "24Khjcmysql")
+    MYSQL_DATABASE: str = "CFLP"
     # 数据库连接 URL，使用 Optional[str] 的原因是在没有设定 MYSQL_HOST 时，SQLALCHEMY_DATABASE_URI 会被设置为 None，方便if判断。
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
     

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import pytz
 from bcrypt import hashpw, gensalt, checkpw
 
-from app.crud.session import get_db
+from app.db.session import get_db
 from app.models.user import User
 # from app.services.api_key import APIKeyService
 
