@@ -1,65 +1,167 @@
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+"""
+OpenAI API 客户端，用于调用 GPT 模型和 Embedding 模型
+"""
+import logging
+from typing import List, Dict, Any, Optional
+import openai
 from openai import OpenAI
-from app.core.config import Config
 
-"""
+from app.core.config import settings
 
-"""
+logger = logging.getLogger(__name__)
 
 class OpenAIClient:
-    def __init__(self):
-        # 初始化 OpenAI 客户端
-        self._client = OpenAI(api_key=Config.OPENAI_API_KEY, base_url=Config.OPENAI_BASE_URL)
-        # 嵌入模型和维度
-        self._embedding_model = Config.OPENAI_EMBEDDING_MODEL
-        self._embedding_dimension = Config.EMBEDDING_DIMENSION
-        # GPT 模型和客户端
-        self._gpt_model = Config.OPENAI_GPT_MODEL
-        self._temperature = Config.TEMPERATURE
-        
-    def generate_embedding(self, text):
-        """
-        使用 OpenAI 生成文本嵌入（Embedding）。
-        :param text: 输入的文本
-        :return: 返回嵌入向量
-        """
-        response = self._client.embeddings.create(input=text, model=self._embedding_model)
-        embedding = response.data[0].embedding # 获取嵌入向量
-        return embedding
-
-    def generate_response(self, messages):
-        """
-        使用 GPT 模型生成回复。
-        :param messages: 消息列表，包含历史消息
-        :param max_tokens: 最大 token 数
-        :param temperature: 控制生成文本的多样性
-        :return: 返回生成的文本
-        """
-        response = self._client.chat.completions.create(
-            model=self._gpt_model,
-            messages=messages,
-            temperature=self._temperature,
-            )
-        return response.choices[0].message.content
+    """OpenAI API 客户端"""
     
-    def generate_response_stream(self, messages):
-        """
-        使用 GPT 模型生成流式回复。
-        :param messages: 消息列表，包含历史消息
-        :return: 返回流式生成的文本
-        """
-        # 启用流式输出
-        stream = self._client.chat.completions.create(
-            model=self._gpt_model,
-            messages=messages,
-            temperature=self._temperature,
-            stream=True,  # 设置为 True 开启流式输出
+    def __init__(self):
+        """初始化 OpenAI 客户端"""
+        if not settings.OPENAI_API_KEY:
+            logger.warning("OPENAI_API_KEY not configured")
+            self.client = None
+            return
+        
+        # 配置 OpenAI 客户端
+        self.client = OpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            base_url=str(settings.OPENAI_BASE_URL) if settings.OPENAI_BASE_URL else None
         )
-        for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                print(chunk.choices[0].delta.content, end="")
+        
+        logger.info("OpenAI client initialized successfully")
+    
+    async def generate_response(
+        self, 
+        messages: List[Dict[str, str]], 
+        model: str = None,
+        max_tokens: int = None,
+        temperature: float = None
+    ) -> str:
+        """
+        生成聊天回复
+        
+        Args:
+            messages: 消息列表，格式为 [{"role": "user", "content": "..."}]
+            model: 使用的模型，默认使用配置中的模型
+            max_tokens: 最大 token 数
+            temperature: 温度参数
+        
+        Returns:
+            生成的回复文本
+        """
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+        
+        try:
+            # 使用默认配置
+            if model is None:
+                model = settings.OPENAI_MODEL
+            if max_tokens is None:
+                max_tokens = settings.OPENAI_MAX_TOKENS
+            if temperature is None:
+                temperature = settings.OPENAI_TEMPERATURE
+            
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            
+            content = response.choices[0].message.content
+            logger.info(f"Generated response: model={model}, tokens={response.usage.total_tokens}")
+            return content
+            
+        except Exception as e:
+            logger.error(f"Failed to generate response: {e}")
+            raise
+    
+    async def get_embedding(self, text: str, model: str = None) -> List[float]:
+        """
+        获取文本的向量嵌入
+        
+        Args:
+            text: 输入文本
+            model: 嵌入模型，默认使用配置中的模型
+        
+        Returns:
+            向量嵌入列表
+        """
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+        
+        try:
+            if model is None:
+                model = settings.OPENAI_EMBEDDING_MODEL
+            
+            response = self.client.embeddings.create(
+                model=model,
+                input=text
+            )
+            
+            embedding = response.data[0].embedding
+            logger.debug(f"Generated embedding: model={model}, dimension={len(embedding)}")
+            return embedding
+            
+        except Exception as e:
+            logger.error(f"Failed to generate embedding: {e}")
+            raise
+    
+    async def batch_get_embeddings(
+        self, 
+        texts: List[str], 
+        model: str = None
+    ) -> List[List[float]]:
+        """
+        批量获取文本的向量嵌入
+        
+        Args:
+            texts: 输入文本列表
+            model: 嵌入模型
+        
+        Returns:
+            向量嵌入列表的列表
+        """
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+        
+        try:
+            if model is None:
+                model = settings.OPENAI_EMBEDDING_MODEL
+            
+            response = self.client.embeddings.create(
+                model=model,
+                input=texts
+            )
+            
+            embeddings = [data.embedding for data in response.data]
+            logger.info(f"Generated {len(embeddings)} embeddings: model={model}")
+            return embeddings
+            
+        except Exception as e:
+            logger.error(f"Failed to generate batch embeddings: {e}")
+            raise
+    
+    def is_available(self) -> bool:
+        """检查 OpenAI 客户端是否可用"""
+        return self.client is not None
+
+# 向后兼容的函数
+def generate_embedding(text: str) -> List[float]:
+    """
+    向后兼容的嵌入生成函数
+    
+    Args:
+        text: 输入文本
+    
+    Returns:
+        向量嵌入列表
+    """
+    try:
+        client = OpenAIClient()
+        import asyncio
+        return asyncio.run(client.get_embedding(text))
+    except Exception as e:
+        logger.error(f"Embedding generation failed: {e}")
+        raise
 
 if __name__ == "__main__":
     

@@ -27,5 +27,21 @@ class Message(Base, TimestampMixin):
     chat_id = Column(String(36), ForeignKey("chats.id"), nullable=False)  # 外键约束
     meta_data = Column(JSON, nullable=True)
     
+    # === 审核相关字段 ===
+    audit_status = Column(String(20), default="pending", nullable=False, comment="审核状态: pending/approved/rejected")
+    is_flagged = Column(String(1), default="0", nullable=False, comment="是否被标记: 0-否, 1-是")
+    
     # Relationships
     chat = relationship("Chat", back_populates="messages")
+    # 审核记录关系
+    audits = relationship("MessageAudit", back_populates="message", cascade="all, delete-orphan")
+    
+    @property
+    def is_approved(self) -> bool:
+        """消息是否已通过审核"""
+        return self.audit_status == "approved"
+    
+    @property
+    def needs_review(self) -> bool:
+        """消息是否需要审核"""
+        return self.audit_status == "pending"

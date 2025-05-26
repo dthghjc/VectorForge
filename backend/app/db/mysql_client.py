@@ -1,52 +1,155 @@
 # import os
 # import sys
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from app.core.config import Config
+from app.core.config import settings
 import mysql.connector
+from mysql.connector import Error
 import json
 from uuid import uuid4
 from datetime import datetime, timezone
 import pytz
+import logging
 
-class SQLClient:
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class MySQLClient:
     def __init__(self):
         """
-        初始化数据库连接。
+        初始化 MySQL 客户端
         """
-        self.host = Config.MYSQL_HOST
-        self.port = Config.MYSQL_PORT
-        self.user = Config.MYSQL_USER
-        self.password = Config.MYSQL_PASSWORD
-        self.database = Config.MYSQL_DATABASE
+        # 使用新的配置系统
+        self.host = settings.DB_HOST
+        self.port = settings.DB_PORT
+        self.user = settings.DB_USER
+        self.password = settings.DB_PASSWORD
+        self.database = settings.DB_NAME
+        self.connection = None
 
-    def get_connection(self):
+    def connect(self):
         """
-        获取数据库连接。
+        连接到 MySQL 数据库
         """
-        return mysql.connector.connect(
-            host=self.host,
-            port=self.port,
-            user=self.user,
-            password=self.password,
-            database=self.database
-        )
+        try:
+            self.connection = mysql.connector.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+            if self.connection.is_connected():
+                logging.info(f"成功连接到 MySQL 数据库: {self.database}")
+                return True
+        except Error as e:
+            logging.error(f"连接 MySQL 数据库时出错: {e}")
+            return False
 
-    def execute_query(self, query: str, params: tuple = (), fetch: bool = False):
+    def disconnect(self):
         """
-        执行 SQL 语句。
-        :param query: SQL 查询语句
-        :param params: 查询参数
-        :param fetch: 是否返回查询结果
+        断开与 MySQL 数据库的连接
         """
-        connection = self.get_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute(query, params)
+        if self.connection and self.connection.is_connected():
+            self.connection.close()
+            logging.info("MySQL 数据库连接已关闭")
+
+    def execute_query(self, query, params=None):
+        """
+        执行查询语句
+        """
+        if not self.connection or not self.connection.is_connected():
+            logging.error("数据库未连接")
+            return None
         
-        result = cursor.fetchall() if fetch else None
-        connection.commit()
-        cursor.close()
-        connection.close()
-        return result
+        try:
+            cursor = self.connection.cursor(dictionary=True)
+            cursor.execute(query, params)
+            result = cursor.fetchall()
+            cursor.close()
+            return result
+        except Error as e:
+            logging.error(f"执行查询时出错: {e}")
+            return None
+
+    def execute_update(self, query, params=None):
+        """
+        执行更新语句（INSERT, UPDATE, DELETE）
+        """
+        if not self.connection or not self.connection.is_connected():
+            logging.error("数据库未连接")
+            return False
+        
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            self.connection.commit()
+            cursor.close()
+            logging.info(f"成功执行更新，影响行数: {cursor.rowcount}")
+            return True
+        except Error as e:
+            logging.error(f"执行更新时出错: {e}")
+            self.connection.rollback()
+            return False
+
+    def create_table_if_not_exists(self, table_name, table_schema):
+        """
+        如果表不存在则创建表
+        """
+        query = f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            {table_schema}
+        )
+        """
+        return self.execute_update(query)
+
+    def insert_data(self, table_name, data):
+        """
+        插入数据到指定表
+        """
+        if not data:
+            return False
+        
+        columns = ', '.join(data.keys())
+        placeholders = ', '.join(['%s'] * len(data))
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+        
+        return self.execute_update(query, list(data.values()))
+
+    def update_data(self, table_name, data, condition):
+        """
+        更新表中的数据
+        """
+        if not data:
+            return False
+        
+        set_clause = ', '.join([f"{key} = %s" for key in data.keys()])
+        query = f"UPDATE {table_name} SET {set_clause} WHERE {condition}"
+        
+        return self.execute_update(query, list(data.values()))
+
+    def delete_data(self, table_name, condition, params=None):
+        """
+        删除表中的数据
+        """
+        query = f"DELETE FROM {table_name} WHERE {condition}"
+        return self.execute_update(query, params)
+
+    def get_table_info(self, table_name):
+        """
+        获取表的结构信息
+        """
+        query = f"DESCRIBE {table_name}"
+        return self.execute_query(query)
+
+    def get_all_tables(self):
+        """
+        获取数据库中所有表的名称
+        """
+        query = "SHOW TABLES"
+        result = self.execute_query(query)
+        if result:
+            return [list(row.values())[0] for row in result]
+        return []
 
     def user_exists(self, username: str):
         """
@@ -140,7 +243,18 @@ class SQLClient:
 
         return conversation_id
 
+# 使用示例
 if __name__ == "__main__":
-    db_client = SQLClient()
-    conversation_id = db_client.append_to_conversation("test_user", None, "你好！", is_user=True)
-    db_client.append_to_conversation("test_user", conversation_id, "你好！我可以帮你什么？", is_user=False)
+    # 创建 MySQL 客户端实例
+    mysql_client = MySQLClient()
+    
+    # 连接数据库
+    if mysql_client.connect():
+        # 获取所有表
+        tables = mysql_client.get_all_tables()
+        print(f"数据库中的表: {tables}")
+        
+        # 断开连接
+        mysql_client.disconnect()
+    else:
+        print("无法连接到数据库")

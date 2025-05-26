@@ -9,11 +9,12 @@ import re
 import uuid
 
 from app.core import security
-from app.core.config import Config
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import Token
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin
+from app.crud.user import user_crud
 from app.api.exceptions import APIExceptions
 
 router = APIRouter()  # 创建一个名为 "router" 的 API 路由器
@@ -45,7 +46,7 @@ async def get_current_user(
         # token: 从请求中提取的令牌。
         # Config.SECRET_KEY: 用于签名验证的密钥。
         # algorithms=[Config.ALGORITHM]: 使用的加密算法（如 "HS256"）。
-        payload = jwt.decode(token, Config.SECRET_KEY, algorithms=[Config.ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         
         # 从解码后的 payload 中提取 sub 字段（通常表示用户名或用户 ID）
         username: str = payload.get("sub")
@@ -56,8 +57,8 @@ async def get_current_user(
         # 如果令牌无效（例如签名错误、过期等），捕获异常并抛出异常。
         raise APIExceptions.TOKEN_INVALID_EXCEPTION
     
-    # 查询用户，如果用户不存在，抛出异常。
-    user = db.query(User).filter(User.username == username).first()
+    # 使用新的CRUD方法
+    user = user_crud.get_user_by_username(db, username)
     if user is None:
         raise APIExceptions.USER_NOT_FOUND_EXCEPTION
     
@@ -81,7 +82,7 @@ def is_valid_email(email: str) -> bool:
 
 # 用户注册接口
 @router.post("/register", response_model=UserResponse, operation_id="register_user")
-async def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
+async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> Any:
     """
     用户注册接口
     - username: 必填，用户名
@@ -92,48 +93,35 @@ async def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any
     """
     try:
         # 验证邀请码
-        invite_codes = Config.get_invite_codes
+        invite_codes = settings.invite_codes_list
         # 只有当邀请码列表不为空时才验证邀请码
         if invite_codes and user_in.invite_code not in invite_codes:
             raise APIExceptions.INVALID_INVITE_CODE_EXCEPTION
         
         # 检查用户名是否存在
-        user = db.query(User).filter(User.username == user_in.username).first()
-        if user:
+        if user_crud.get_user_by_username(db, user_in.username):
             raise APIExceptions.USERNAME_EXISTS_EXCEPTION
         
-        # 处理邮箱
-        email = user_in.email
-        if email and email.strip():  # 如果提供了非空邮箱
-            # 验证邮箱格式
-            if not is_valid_email(email):
-                raise APIExceptions.INVALID_EMAIL_FORMAT_EXCEPTION
-                
-            # 检查邮箱是否已存在
-            user = db.query(User).filter(User.email == email).first()
-            if user:
-                raise APIExceptions.EMAIL_EXISTS_EXCEPTION
-        else:
-            # 如果没有提供邮箱，将其设置为None，避免空字符串导致的唯一性约束问题
-            email = None
+        # 检查邮箱是否存在
+        if user_in.email and user_crud.get_user_by_email(db, user_in.email):
+            raise APIExceptions.EMAIL_EXISTS_EXCEPTION
         
         # 如果未提供nickname或为空字符串，生成一个随机的nickname
         nickname = user_in.nickname
         if not nickname or nickname.strip() == "":
             nickname = f"user_{uuid.uuid4().hex[:8]}"
         
-        # 创建新用户
-        user = User(
+        # 创建用户数据
+        user_create = UserCreate(
             username=user_in.username,
-            email=email,  # 使用处理后的email
+            email=user_in.email,
             nickname=nickname,
-            hashed_password=security.get_password_hash(user_in.password),
-            is_active=True,  # 默认设置为激活状态
-            is_superuser=False,  # 默认设置为非超级用户
+            password=user_in.password,
+            invite_code=user_in.invite_code
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        
+        # 使用CRUD创建用户
+        user = user_crud.create_user(db, user_create)
         return user
     except RequestException as e:
         # 处理网络或服务器错误
@@ -148,24 +136,23 @@ async def login_access_token(
     """
     用户登录接口，获取 JWT 访问令牌
     """
-    # 验证用户凭证
-    user = db.query(User).filter(User.username == form_data.username).first()
+    # 使用CRUD进行用户认证
+    user = user_crud.authenticate_user(db, form_data.username, form_data.password)
     
-    # 检查用户是否存在
     if not user:
-        raise APIExceptions.USER_NOT_FOUND_EXCEPTION
-    
-    # 验证密码
-    if not security.verify_password(form_data.password, user.hashed_password):
         raise APIExceptions.INCORRECT_PASSWORD_EXCEPTION
     
-    # 验证用户状态    
     if not user.is_active:
         raise APIExceptions.INACTIVE_USER_EXCEPTION
     
+    # 更新最后登录时间
+    from datetime import datetime
+    user.last_login_at = datetime.now()
+    db.commit()
+    
     # 生成访问 token - 使用 timedelta 创建过期时间间隔
     # Config.ACCESS_TOKEN_EXPIRE_MINUTES: 从配置中读取令牌有效期（例如 30 分钟）
-    access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     access_token = security.create_access_token(
         data={"sub": user.username}, 
@@ -178,4 +165,28 @@ async def test_token(current_user: User = Depends(get_current_user)):
     """
     测试访问 token 是否有效
     """
+    return current_user
+
+# === 新增权限检查装饰器 ===
+def require_role(required_role: str):
+    """权限检查装饰器"""
+    def decorator(current_user: User = Depends(get_current_user)):
+        if required_role == "reviewer" and not current_user.can_review:
+            raise HTTPException(status_code=403, detail="需要审核员权限")
+        elif required_role == "admin" and not current_user.is_superuser:
+            raise HTTPException(status_code=403, detail="需要管理员权限")
+        return current_user
+    return decorator
+
+# 权限检查依赖
+def get_current_reviewer(current_user: User = Depends(get_current_user)) -> User:
+    """获取当前审核员用户"""
+    if not current_user.can_review:
+        raise HTTPException(status_code=403, detail="需要审核员权限")
+    return current_user
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    """获取当前管理员用户"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理员权限")
     return current_user

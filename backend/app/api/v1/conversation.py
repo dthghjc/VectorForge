@@ -1,84 +1,159 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
-from app.services.response_generation import OpenAI_RAG_Client
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from typing import List, Dict, Any
+from pydantic import BaseModel
+import time
+
+from app.core.config import settings
+from app.db.session import get_db
+from app.models.user import User
+from app.api.v1.sql.auth import get_current_user
+from app.services.openai_client import OpenAIClient
+from app.services.knowledge_retrieval import KnowledgeRetrievalService
 from app.db.conversation_manager import ConversationManager
-from app.db.mysql_client import SQLClient
-from app.models.conversation_base import ConversationRequest, ConversationResponse, ChatHistoryRequest
-from app.core.config import Config
-from typing import Optional
-import json
-from uuid import uuid4
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-RAG_Client = APIRouter()
-Test_Client = APIRouter()
-SQL_ChatHistory_Client = APIRouter()
-
-GPT_Client = OpenAI_RAG_Client()
-SQL_client = SQLClient()
+# 初始化服务
+openai_client = OpenAIClient()
+knowledge_service = KnowledgeRetrievalService()
 conversation_manager = ConversationManager()
 
-API_KEY = Config.FASTAPI_API_KEY
-# 验证 API 密钥的依赖项
-def api_key_auth(api_key: Optional[str] = Header(None)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API Key")
-    return api_key
+router = APIRouter()
 
-@RAG_Client.post("/cflp")
-def generate_response_for_user(request: ConversationRequest, api_key: str = Depends(api_key_auth)):
-    # 用户输入写入SQL
-    conversation_id = SQL_client.append_to_conversation(
-        username=request.user_id,
-        conversation_id=request.conversation_id,
-        message=request.query,
-        is_user=True
-        )
-    # 获取当前对话的历史对话
-    history = conversation_manager.get_history(request.conversation_id)
-    response = GPT_Client.generate_response(user_query = request.query, history=history)
-    # 更新对话历史，保存用户查询和模型响应
-    conversation_manager.update_history(conversation_id=conversation_id, query=request.query, response=response)
-    # 模型响应写入SQL
-    SQL_client.append_to_conversation(
-        username=request.user_id,
-        conversation_id=conversation_id,
-        message=response,
-        is_user=False
-        )
-    return ConversationResponse(
-        user_id=request.user_id,
-        conversation_id=conversation_id,
-        model_response=response
-    )
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: str = None
 
-@SQL_ChatHistory_Client.post("/chat_history")
-async def add_chat_history(request: ChatHistoryRequest, api_key: str = Depends(api_key_auth)):
+class ChatResponse(BaseModel):
+    response: str
+    conversation_id: str
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    聊天接口
+    """
     try:
-        # 如果 request.conversation_id 为空，SQL_client.append_to_conversation 内部应生成新的会话ID
-        conversation_id = SQL_client.append_to_conversation(
-            username=request.user_id,
-            conversation_id=request.conversation_id,
-            message=request.message,
-            is_user=request.is_user
+        # 生成对话ID（如果没有提供）
+        conversation_id = request.conversation_id or f"conv_{current_user.id}_{int(time.time())}"
+        
+        # 添加用户消息到历史
+        conversation_manager.add_message(
+            conversation_id=conversation_id,
+            role="user",
+            content=request.message
         )
-        return {
-            "user_id": request.user_id,
-            "conversation_id": conversation_id,
-            "status": "History added successfully"
-        }
+        
+        # 检索相关知识
+        knowledge_results = await knowledge_service.search_knowledge(
+            query=request.message,
+            top_k=5
+        )
+        
+        # 构建上下文
+        context = ""
+        if knowledge_results:
+            context = "\n".join([result.get("content", "") for result in knowledge_results])
+        
+        # 获取对话历史
+        history_messages = conversation_manager.get_context_messages(conversation_id)
+        
+        # 构建完整的消息列表
+        messages = [
+            {"role": "system", "content": f"你是一个专业的问答助手。基于以下知识回答用户问题：\n{context}"}
+        ]
+        messages.extend(history_messages)
+        messages.append({"role": "user", "content": request.message})
+        
+        # 生成回复
+        response = await openai_client.generate_response(
+            messages=messages,
+            max_tokens=settings.OPENAI_MAX_TOKENS,
+            temperature=settings.OPENAI_TEMPERATURE
+        )
+        
+        # 添加助手回复到历史
+        conversation_manager.add_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response
+        )
+        
+        return ChatResponse(
+            response=response,
+            conversation_id=conversation_id
+        )
+        
     except Exception as e:
-        logger.error(f"Error adding chat history: {e}")
-        return {
-            "user_id": request.user_id,
-            "conversation_id": request.conversation_id,
-            "error": f"Failed to add chat history: {str(e)}"
-        }
+        raise HTTPException(status_code=500, detail=f"聊天处理失败: {str(e)}")
 
-# 测试接口
-@Test_Client.post("/")
-async def api_test(request: ConversationRequest, api_key: str = Depends(api_key_auth)):
-    request.conversation_id = str(uuid4())
-    results = request
-    return results
+@router.get("/conversations")
+async def get_conversations(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取用户的对话列表
+    """
+    try:
+        conversations = conversation_manager.get_all_conversations()
+        
+        # 过滤当前用户的对话（简化版本）
+        user_conversations = {}
+        for conv_id, messages in conversations.items():
+            if f"conv_{current_user.id}_" in conv_id:
+                user_conversations[conv_id] = conversation_manager.get_conversation_summary(conv_id)
+        
+        return {"conversations": user_conversations}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取对话列表失败: {str(e)}")
+
+@router.get("/conversations/{conversation_id}")
+async def get_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取特定对话的详细信息
+    """
+    try:
+        # 简单的权限检查
+        if not conversation_id.startswith(f"conv_{current_user.id}_"):
+            raise HTTPException(status_code=403, detail="无权访问此对话")
+        
+        messages = conversation_manager.get_conversation(conversation_id)
+        
+        return {
+            "conversation_id": conversation_id,
+            "messages": messages
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取对话失败: {str(e)}")
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    删除对话
+    """
+    try:
+        # 简单的权限检查
+        if not conversation_id.startswith(f"conv_{current_user.id}_"):
+            raise HTTPException(status_code=403, detail="无权删除此对话")
+        
+        conversation_manager.clear_conversation(conversation_id)
+        
+        return {"message": "对话已删除"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除对话失败: {str(e)}")

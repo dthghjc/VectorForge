@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt  # 用于编码和解码 JWT 令牌，处理令牌相关错误。
-from app.core.config import Config
+from app.core.config import settings
 from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader  # FastAPI 提供的安全工具，分别处理 OAuth2 令牌和 API Key。
 from sqlalchemy.orm import Session
@@ -60,6 +60,7 @@ def get_password_hash(password: str) -> str:
     """
     # return pwd_context.hash(password)
     return hashpw(password.encode(), gensalt()).decode()
+
 # 创建访问token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
@@ -71,7 +72,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.now(Beijing_tz) + expires_delta
     else:
-        expire = datetime.now(Beijing_tz) + timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(Beijing_tz) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     # 更新 payload
     to_encode.update({"exp": expire})
     # 使用 pyjwt 库将 payload 编码为 JWT 字符串。
@@ -82,5 +83,5 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     algorithm=settings.ALGORITHM: 加密算法（从配置中读取，例如 "HS256"）。
         HS256 是常用的 HMAC SHA-256 算法。
     """
-    encoded_jwt = jwt.encode(to_encode, Config.SECRET_KEY, algorithm=Config.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt 
