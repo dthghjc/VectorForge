@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     # ========== 数据库配置 ==========
     # 数据库类型
     DATABASE_TYPE: Literal["mysql", "postgresql", "sqlite"] = Field(
-        default="postgresql",  # 推荐使用 PostgreSQL
+        default="mysql",
         description="数据库类型"
     )
     
@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     DB_HOST: str = Field(default="localhost", description="数据库主机")
     DB_PORT: int = Field(default=5432, ge=1, le=65535, description="数据库端口")
     DB_USER: str = Field(default="vectorforge", description="数据库用户名")
-    DB_PASSWORD: str = Field(description="数据库密码")
+    DB_PASSWORD: Optional[str] = Field(default=None, description="数据库密码")
     DB_NAME: str = Field(default="vectorforge", description="数据库名称")
     
     # 连接池配置
@@ -106,11 +106,14 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             return self.DATABASE_URL
         
+        # 处理密码（可选）
+        password_part = f":{self.DB_PASSWORD}" if self.DB_PASSWORD else ""
+        
         # 根据数据库类型构建连接字符串
         if self.DATABASE_TYPE == "mysql":
-            return f"mysql+mysqlconnector://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            return f"mysql+mysqlconnector://{self.DB_USER}{password_part}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         elif self.DATABASE_TYPE == "postgresql":
-            return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            return f"postgresql+psycopg2://{self.DB_USER}{password_part}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         elif self.DATABASE_TYPE == "sqlite":
             return f"sqlite:///./{self.DB_NAME}.db"
         else:
@@ -153,10 +156,17 @@ class Settings(BaseSettings):
     
     # 文件上传配置
     MAX_FILE_SIZE: int = Field(default=10 * 1024 * 1024, description="最大文件大小（字节）")
-    ALLOWED_FILE_TYPES: List[str] = Field(
-        default=["txt", "pdf", "docx", "json"], 
-        description="允许的文件类型"
+    ALLOWED_FILE_TYPES: str = Field(
+        default="txt,pdf,docx,json", 
+        description="允许的文件类型，逗号分隔"
     )
+    
+    @property
+    def allowed_file_types_list(self) -> List[str]:
+        """获取允许的文件类型列表"""
+        if not self.ALLOWED_FILE_TYPES:
+            return []
+        return [file_type.strip() for file_type in self.ALLOWED_FILE_TYPES.split(",") if file_type.strip()]
     
     # 审核配置
     AUTO_AUDIT_THRESHOLD: float = Field(default=0.8, ge=0.0, le=1.0, description="自动审核阈值")
@@ -194,18 +204,17 @@ class Settings(BaseSettings):
     RELOAD: bool = Field(default=False, description="自动重载")
     
     # CORS 配置
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"], 
-        description="允许的跨域源"
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:5173", 
+        description="允许的跨域源，逗号分隔"
     )
     
-    @field_validator('CORS_ORIGINS', mode='before')
-    @classmethod
-    def parse_cors_origins(cls, v):
-        """解析 CORS 源列表"""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """获取 CORS 源列表"""
+        if not self.CORS_ORIGINS:
+            return []
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
     
     # ========== MinIO 配置 ==========
     MINIO_ENDPOINT: Optional[str] = Field(default=None, description="MinIO 服务地址")

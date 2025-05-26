@@ -10,22 +10,26 @@ from app.models.user import User
 from app.api.v1.sql.auth import get_current_user
 from app.services.openai_client import OpenAIClient
 from app.services.knowledge_retrieval import KnowledgeRetrievalService
-from app.db.conversation_manager import ConversationManager
+from app.services.conversation_service import get_conversation_service
 
 # 初始化服务
 openai_client = OpenAIClient()
 knowledge_service = KnowledgeRetrievalService()
-conversation_manager = ConversationManager()
 
 router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
-    conversation_id: str = None
+    chat_id: str = None
 
 class ChatResponse(BaseModel):
     response: str
-    conversation_id: str
+    chat_id: str
+    message_id: str
+
+class ChatCreateRequest(BaseModel):
+    title: str = None
+    description: str = None
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -34,17 +38,29 @@ async def chat(
     db: Session = Depends(get_db)
 ):
     """
-    聊天接口
+    聊天接口 - 使用新的服务架构
     """
     try:
-        # 生成对话ID（如果没有提供）
-        conversation_id = request.conversation_id or f"conv_{current_user.id}_{int(time.time())}"
+        conversation_service = get_conversation_service(db)
         
-        # 添加用户消息到历史
-        conversation_manager.add_message(
-            conversation_id=conversation_id,
+        # 获取或创建对话
+        if request.chat_id:
+            chat = conversation_service.get_chat_by_id(request.chat_id)
+            if not chat or chat.user_id != current_user.id:
+                raise HTTPException(status_code=404, detail="对话不存在或无权访问")
+        else:
+            # 创建新对话
+            chat = conversation_service.create_chat(
+                user_id=current_user.id,
+                title="新对话"
+            )
+        
+        # 添加用户消息
+        user_message = conversation_service.add_message(
+            chat_id=chat.id,
             role="user",
-            content=request.message
+            content=request.message,
+            user_id=current_user.id
         )
         
         # 检索相关知识
@@ -59,7 +75,7 @@ async def chat(
             context = "\n".join([result.get("content", "") for result in knowledge_results])
         
         # 获取对话历史
-        history_messages = conversation_manager.get_context_messages(conversation_id)
+        history_messages = conversation_service.get_context_for_llm(chat.id)
         
         # 构建完整的消息列表
         messages = [
@@ -75,59 +91,114 @@ async def chat(
             temperature=settings.OPENAI_TEMPERATURE
         )
         
-        # 添加助手回复到历史
-        conversation_manager.add_message(
-            conversation_id=conversation_id,
+        # 添加助手回复
+        assistant_message = conversation_service.add_message(
+            chat_id=chat.id,
             role="assistant",
             content=response
         )
         
         return ChatResponse(
             response=response,
-            conversation_id=conversation_id
+            chat_id=chat.id,
+            message_id=assistant_message.id
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"聊天处理失败: {str(e)}")
 
-@router.get("/conversations")
-async def get_conversations(
-    current_user: User = Depends(get_current_user)
+@router.post("/chats", response_model=Dict[str, Any])
+async def create_chat(
+    request: ChatCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    创建新对话
+    """
+    try:
+        conversation_service = get_conversation_service(db)
+        
+        chat = conversation_service.create_chat(
+            user_id=current_user.id,
+            title=request.title or "新对话",
+            description=request.description
+        )
+        
+        return {
+            "chat_id": chat.id,
+            "title": chat.title,
+            "description": chat.description,
+            "created_at": chat.created_at.isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建对话失败: {str(e)}")
+
+@router.get("/chats")
+async def get_user_chats(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     获取用户的对话列表
     """
     try:
-        conversations = conversation_manager.get_all_conversations()
+        conversation_service = get_conversation_service(db)
         
-        # 过滤当前用户的对话（简化版本）
-        user_conversations = {}
-        for conv_id, messages in conversations.items():
-            if f"conv_{current_user.id}_" in conv_id:
-                user_conversations[conv_id] = conversation_manager.get_conversation_summary(conv_id)
+        chats = conversation_service.get_user_chats(
+            user_id=current_user.id,
+            skip=skip,
+            limit=limit
+        )
         
-        return {"conversations": user_conversations}
+        chat_list = []
+        for chat in chats:
+            chat_summary = conversation_service.get_conversation_summary(chat.id)
+            chat_list.append({
+                "chat_id": chat.id,
+                "title": chat.title,
+                "description": chat.description,
+                "created_at": chat.created_at.isoformat(),
+                "updated_at": chat.updated_at.isoformat(),
+                "message_count": chat_summary.get("message_count", 0)
+            })
+        
+        return {"chats": chat_list}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取对话列表失败: {str(e)}")
 
-@router.get("/conversations/{conversation_id}")
-async def get_conversation(
-    conversation_id: str,
-    current_user: User = Depends(get_current_user)
+@router.get("/chats/{chat_id}")
+async def get_chat_detail(
+    chat_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     获取特定对话的详细信息
     """
     try:
-        # 简单的权限检查
-        if not conversation_id.startswith(f"conv_{current_user.id}_"):
-            raise HTTPException(status_code=403, detail="无权访问此对话")
+        conversation_service = get_conversation_service(db)
         
-        messages = conversation_manager.get_conversation(conversation_id)
+        # 验证对话所有权
+        chat = conversation_service.get_chat_by_id(chat_id)
+        if not chat or chat.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="对话不存在或无权访问")
+        
+        # 获取消息
+        messages = conversation_service.get_chat_messages(chat_id)
         
         return {
-            "conversation_id": conversation_id,
+            "chat_id": chat.id,
+            "title": chat.title,
+            "description": chat.description,
+            "created_at": chat.created_at.isoformat(),
+            "updated_at": chat.updated_at.isoformat(),
             "messages": messages
         }
         
@@ -136,24 +207,77 @@ async def get_conversation(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取对话失败: {str(e)}")
 
-@router.delete("/conversations/{conversation_id}")
-async def delete_conversation(
-    conversation_id: str,
-    current_user: User = Depends(get_current_user)
+@router.delete("/chats/{chat_id}")
+async def delete_chat(
+    chat_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     删除对话
     """
     try:
-        # 简单的权限检查
-        if not conversation_id.startswith(f"conv_{current_user.id}_"):
-            raise HTTPException(status_code=403, detail="无权删除此对话")
+        conversation_service = get_conversation_service(db)
         
-        conversation_manager.clear_conversation(conversation_id)
+        # 验证对话所有权
+        chat = conversation_service.get_chat_by_id(chat_id)
+        if not chat or chat.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="对话不存在或无权访问")
         
-        return {"message": "对话已删除"}
+        success = conversation_service.delete_chat(chat_id)
+        
+        if success:
+            return {"message": "对话已删除"}
+        else:
+            raise HTTPException(status_code=500, detail="删除对话失败")
         
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除对话失败: {str(e)}")
+
+@router.get("/cache/stats")
+async def get_cache_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    获取缓存统计信息（管理员功能）
+    """
+    try:
+        if not current_user.can_review():
+            raise HTTPException(status_code=403, detail="权限不足")
+        
+        conversation_service = get_conversation_service(db)
+        stats = conversation_service.get_cache_stats()
+        
+        return {"cache_stats": stats}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取缓存统计失败: {str(e)}")
+
+@router.post("/cache/clear")
+async def clear_cache(
+    chat_id: str = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    清除缓存（管理员功能）
+    """
+    try:
+        if not current_user.can_review():
+            raise HTTPException(status_code=403, detail="权限不足")
+        
+        conversation_service = get_conversation_service(db)
+        conversation_service.clear_cache(chat_id)
+        
+        message = f"已清除{'指定对话' if chat_id else '所有'}缓存"
+        return {"message": message}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清除缓存失败: {str(e)}")

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -72,7 +72,8 @@ class UserRegister(BaseModel):
     invite_code: str = Field(..., description="邀请码")
     nickname: Optional[str] = Field(None, max_length=100)
 
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         if not v.replace('_', '').replace('-', '').isalnum():
             raise ValueError('用户名只能包含字母、数字、下划线和连字符')

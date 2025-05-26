@@ -17,7 +17,6 @@ class User(Base, TimestampMixin):
     # === 核心字段 ===
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String(64), unique=True, index=True, nullable=False)
-    nickname = Column(String(100), nullable=True)
     email = Column(String(320), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     
