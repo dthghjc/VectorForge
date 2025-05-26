@@ -87,8 +87,7 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
     用户注册接口
     - username: 必填，用户名
     - password: 必填，密码
-    - email: 可选，邮箱
-    - nickname: 可选，昵称
+    - email: 必填，邮箱
     - invite_code: 必填，邀请码
     """
     try:
@@ -106,16 +105,10 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
         if user_in.email and user_crud.get_user_by_email(db, user_in.email):
             raise APIExceptions.EMAIL_EXISTS_EXCEPTION
         
-        # 如果未提供nickname或为空字符串，生成一个随机的nickname
-        nickname = user_in.nickname
-        if not nickname or nickname.strip() == "":
-            nickname = f"user_{uuid.uuid4().hex[:8]}"
-        
-        # 创建用户数据
+        # 创建用户数据（移除 nickname 字段）
         user_create = UserCreate(
             username=user_in.username,
             email=user_in.email,
-            nickname=nickname,
             password=user_in.password,
             invite_code=user_in.invite_code
         )

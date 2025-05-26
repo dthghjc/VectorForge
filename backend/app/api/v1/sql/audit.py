@@ -72,8 +72,7 @@ async def get_pending_messages(
             "chat_title": message.chat.title,
             "user": {
                 "id": message.chat.user.id,
-                "username": message.chat.user.username,
-                "nickname": message.chat.user.nickname
+                "username": message.chat.user.username
             },
             "created_at": message.created_at,
             "audit_status": message.audit_status

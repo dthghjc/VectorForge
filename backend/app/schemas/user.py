@@ -12,7 +12,6 @@ class UserRole(str, Enum):
 # === 基础模型 ===
 class UserBase(BaseModel):
     username: str = Field(..., min_length=4, max_length=64)
-    nickname: Optional[str] = Field(None, max_length=100)
     email: Optional[EmailStr] = None
 
 class UserCreate(UserBase):
@@ -21,7 +20,6 @@ class UserCreate(UserBase):
     role: UserRole = UserRole.USER
 
 class UserUpdate(BaseModel):
-    nickname: Optional[str] = Field(None, max_length=100)
     email: Optional[EmailStr] = None
     avatar_url: Optional[str] = Field(None, max_length=500)
     preferences: Optional[Dict[str, Any]] = None
@@ -52,7 +50,6 @@ class UserBrief(BaseModel):
     """用户简要信息"""
     id: str
     username: str
-    nickname: Optional[str]
     role: UserRole
     avatar_url: Optional[str]
     approval_rate: float
@@ -70,7 +67,6 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
     invite_code: str = Field(..., description="邀请码")
-    nickname: Optional[str] = Field(None, max_length=100)
 
     @field_validator('username')
     @classmethod
