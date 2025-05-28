@@ -15,7 +15,7 @@ from app.models.user import User
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin
 from app.crud.user import user_crud
-from app.api.exceptions import APIExceptions
+from app.core.exceptions import APIExceptions
 
 router = APIRouter()  # 创建一个名为 "router" 的 API 路由器
 # 定义 JWT 认证的 token 端点（/token），客户端通过此端点获取 token。

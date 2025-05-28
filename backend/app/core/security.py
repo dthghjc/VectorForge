@@ -7,6 +7,8 @@ from fastapi.security import OAuth2PasswordBearer, APIKeyHeader  # FastAPI 提�
 from sqlalchemy.orm import Session
 import pytz
 from bcrypt import hashpw, gensalt, checkpw
+import hashlib
+import secrets
 
 from app.db.session import get_db
 from app.models.user import User
@@ -48,7 +50,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     使用 bcrypt 验证明文密码与哈希密码是否一致。
     内部会重新计算哈希并比较，确保安全性。
     """
-    return checkpw(plain_password.encode(), hashed_password.encode())
+    return checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # 生成哈希密码
 def get_password_hash(password: str) -> str:
@@ -59,7 +61,7 @@ def get_password_hash(password: str) -> str:
     使用 bcrypt 对明文密码进行哈希，生成安全的密码存储格式。
     """
     # return pwd_context.hash(password)
-    return hashpw(password.encode(), gensalt()).decode()
+    return hashpw(password.encode('utf-8'), gensalt()).decode('utf-8')
 
 # 创建访问token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -85,3 +87,41 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt 
+
+def generate_api_key() -> str:
+    """生成 API Key"""
+    return f"vf-{secrets.token_urlsafe(32)}"
+
+def hash_api_key(api_key: str) -> str:
+    """对 API Key 进行哈希"""
+    return hashlib.sha256(api_key.encode()).hexdigest()
+
+def verify_api_key(api_key: str, hashed_key: str) -> bool:
+    """验证 API Key"""
+    return hash_api_key(api_key) == hashed_key
+
+async def get_api_key_user(
+    api_key: str = Security(api_key_header),
+    db: Session = Depends(get_db)
+) -> User:
+    """通过 API Key 获取用户"""
+    from app.core.exceptions import APIExceptions
+    
+    if not api_key:
+        raise APIExceptions.api_key_invalid()
+    
+    # 这里简化处理，实际项目中应该有专门的 API Key 表
+    # 目前使用配置中的 API Key 进行验证
+    valid_api_keys = settings.dify_api_keys_list
+    
+    if not valid_api_keys or api_key not in valid_api_keys:
+        raise APIExceptions.api_key_invalid()
+    
+    # 返回系统用户或创建专门的 API 用户
+    # 这里简化处理，返回第一个管理员用户
+    from app.crud.user import user_crud
+    admin_user = user_crud.get_first_admin(db)
+    if not admin_user:
+        raise APIExceptions.api_key_invalid()
+    
+    return admin_user 

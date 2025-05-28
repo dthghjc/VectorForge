@@ -58,12 +58,22 @@ class Settings(BaseSettings):
     # 邀请码配置
     INVITE_CODES: str = Field(default="", description="邀请码列表，逗号分隔")
     
+    # Dify API Keys 配置
+    DIFY_API_KEYS: str = Field(default="", description="Dify API Keys，逗号分隔")
+    
     @property
     def invite_codes_list(self) -> List[str]:
         """获取邀请码列表"""
         if not self.INVITE_CODES:
             return []
         return [code.strip() for code in self.INVITE_CODES.split(",") if code.strip()]
+    
+    @property
+    def dify_api_keys_list(self) -> List[str]:
+        """获取 Dify API Keys 列表"""
+        if not self.DIFY_API_KEYS:
+            return []
+        return [key.strip() for key in self.DIFY_API_KEYS.split(",") if key.strip()]
     
     @field_validator('SECRET_KEY')
     @classmethod

@@ -107,8 +107,13 @@ class UserCRUD:
     def get_reviewers(db: Session) -> List[User]:
         """获取所有审核员"""
         return db.query(User).filter(
-            User.role.in_([UserRole.REVIEWER, UserRole.ADMIN])
+            or_(User.role == UserRole.REVIEWER, User.role == UserRole.ADMIN)
         ).all()
+    
+    @staticmethod
+    def get_first_admin(db: Session) -> Optional[User]:
+        """获取第一个管理员用户"""
+        return db.query(User).filter(User.role == UserRole.ADMIN).first()
     
     @staticmethod
     def update_annotation_stats(db: Session, user_id: str, approved: bool = True):

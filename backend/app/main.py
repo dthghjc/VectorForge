@@ -21,7 +21,12 @@ app = FastAPI(
     ]
 )
 
-# 添加 CORS 中间件
+
+# 配置 CORS 中间件
+# allow_origins: 允许的源域名列表
+# allow_credentials: 允许携带认证信息（如 cookies）
+# allow_methods: 允许的 HTTP 方法，["*"] 表示允许所有方法
+# allow_headers: 允许的请求头，["*"] 表示允许所有请求头
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

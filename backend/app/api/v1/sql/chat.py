@@ -7,7 +7,7 @@ from app.models.chat import Chat, Message
 from app.models.user import User
 from app.schemas.chat import ChatCreate, ChatResponse, MessageCreate, MessageResponse
 from app.api.v1.sql.auth import get_current_user
-from app.api.exceptions import APIExceptions
+from app.core.exceptions import APIExceptions
 
 router = APIRouter()
 

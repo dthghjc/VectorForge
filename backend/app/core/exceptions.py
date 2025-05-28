@@ -52,6 +52,15 @@ class APIExceptions:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    @staticmethod
+    def api_key_invalid():
+        """API Key 无效"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
     # ================ 权限相关异常 (403 Forbidden) ================
     @staticmethod
     def permission_denied(detail: str = "Permission denied"):
