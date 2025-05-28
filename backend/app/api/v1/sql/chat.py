@@ -30,7 +30,7 @@ async def create_chat(
         # 检查提供的 ID 是否已存在
         existing_chat = db.query(Chat).filter(Chat.id == chat_in.id).first()
         if existing_chat:
-            raise APIExceptions.CHAT_ID_EXISTS_EXCEPTION
+            raise APIExceptions.chat_id_exists()
         chat_id = chat_in.id
     else:
         # 前端未提供 ID，让模型使用默认生成器
@@ -96,7 +96,7 @@ async def delete_chat(
         .first()
     )
     if not chat:
-        raise APIExceptions.USER_CHAT_NOT_FOUND_EXCEPTION
+        raise APIExceptions.chat_not_found()
     
     db.delete(chat)
     db.commit()
@@ -122,7 +122,7 @@ async def get_chat(
         .first()
     )
     if not chat:
-        raise APIExceptions.USER_CHAT_NOT_FOUND_EXCEPTION
+        raise APIExceptions.chat_not_found()
     return chat
 
 # 存入特定聊天（chat_id）的新消息
@@ -145,12 +145,12 @@ async def create_message(
         .first()
     )
     if not chat:
-        raise APIExceptions.USER_CHAT_NOT_FOUND_EXCEPTION
+        raise APIExceptions.chat_not_found()
     
     # 验证 role 是否合法
     valid_roles = {"system", "user", "assistant"}
     if message.role not in valid_roles:
-        raise APIExceptions.INVALID_ROLE_EXCEPTION
+        raise APIExceptions.invalid_role()
     
     # 创建并存储新消息
     new_message = Message(

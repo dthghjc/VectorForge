@@ -25,7 +25,7 @@ async def audit_message(
     # 检查消息是否存在
     message = db.query(Message).filter(Message.id == message_id).first()
     if not message:
-        raise HTTPException(status_code=404, detail="消息不存在")
+        raise HTTPException(status_code=404, detail="Message not found")
     
     # 创建审核记录
     audit = audit_crud.create_audit(
@@ -148,7 +148,7 @@ async def flag_message(
     """
     message = db.query(Message).filter(Message.id == message_id).first()
     if not message:
-        raise HTTPException(status_code=404, detail="消息不存在")
+        raise HTTPException(status_code=404, detail="Message not found")
     
     # 切换标记状态
     message.is_flagged = "1" if message.is_flagged == "0" else "0"

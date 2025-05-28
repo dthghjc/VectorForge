@@ -3,141 +3,208 @@ from typing import Dict, Optional, Any
 
 class APIExceptions:
     """
-    API异常类，集中定义各种API错误
+    API异常类，使用标准HTTP状态码
     """
-    # ================ 认证相关异常 (Authentication related exceptions) ================
-    # 通用认证错误
-    CREDENTIALS_EXCEPTION = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",  # 无法验证凭证
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     
-    # Token相关错误
-    TOKEN_EXPIRED_EXCEPTION = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token has expired",  # Token已过期
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    TOKEN_INVALID_EXCEPTION = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid token",  # Token无效
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    # ================ 认证相关异常 (401 Unauthorized) ================
+    @staticmethod
+    def credentials_exception():
+        """无法验证凭证"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    # 用户状态错误
-    INACTIVE_USER_EXCEPTION = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Inactive user",  # 用户未激活
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    @staticmethod
+    def token_expired():
+        """Token已过期"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # ================ 用户相关异常 (User related exceptions) ================
-    # 用户注册相关错误
-    USERNAME_EXISTS_EXCEPTION = HTTPException(
-        status_code=471,  # 自定义状态码：471 - 用户名已存在
-        detail="Username already exists",  # 用户名已存在
-    )
-
-    EMAIL_EXISTS_EXCEPTION = HTTPException(
-        status_code=472,  # 自定义状态码：472 - 邮箱已被注册
-        detail="Email already registered",  # 邮箱已被注册
-    )
+    @staticmethod
+    def token_invalid():
+        """Token无效"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    INVALID_EMAIL_FORMAT_EXCEPTION = HTTPException(
-        status_code=473,  # 自定义状态码：473 - 邮箱格式无效
-        detail="Invalid email format",  # 邮箱格式无效
-    )
-    
-    # 邀请码错误
-    INVALID_INVITE_CODE_EXCEPTION = HTTPException(
-        status_code=451,  # 自定义状态码：451 - 无效邀请码
-        detail="Invalid invite code",  # 无效的邀请码
-    )
+    @staticmethod
+    def inactive_user():
+        """用户未激活"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # 用户登录相关错误
-    USER_NOT_FOUND_EXCEPTION = HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="User not found",  # 用户不存在
-    )
-    
-    INCORRECT_PASSWORD_EXCEPTION = HTTPException(
-        status_code=461,  # 自定义状态码：461 - 密码错误
-        detail="Incorrect password",  # 密码错误
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
-    INCORRECT_USERNAME_PASSWORD_EXCEPTION = HTTPException(
-        status_code=460,  # 自定义状态码：460 - 用户名或密码错误
-        detail="Incorrect username or password",  # 用户名或密码错误
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    @staticmethod
+    def incorrect_password():
+        """密码错误"""
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # ================ 权限相关异常 (Permission related exceptions) ================
-    PERMISSION_DENIED_EXCEPTION = HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Permission denied",  # 权限不足
-    )
+    # ================ 权限相关异常 (403 Forbidden) ================
+    @staticmethod
+    def permission_denied(detail: str = "Permission denied"):
+        """权限不足"""
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail
+        )
 
-    # ================ 系统异常 (System exceptions) ================
-    NETWORK_ERROR_EXCEPTION = HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Network error or service unavailable, please try again later",  # 网络错误或服务不可用，请稍后再试
-    )
+    @staticmethod
+    def reviewer_required():
+        """需要审核员权限"""
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Reviewer permission required"
+        )
 
-    # ================ 聊天相关异常 (Chat related exceptions) ================
-    CHAT_NOT_FOUND_EXCEPTION = HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Chat not found",  # 聊天记录不存在
-    )
-    
-    # 指定用户未找到指定对话
-    USER_CHAT_NOT_FOUND_EXCEPTION = HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Chat not found for this user",  # 未找到此用户的指定对话
-    )
+    @staticmethod
+    def admin_required():
+        """需要管理员权限"""
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin permission required"
+        )
 
-    CHAT_ID_EXISTS_EXCEPTION = HTTPException(
-        status_code=status.HTTP_409_CONFLICT,  # 409 Conflict 状态码表示请求冲突
-        detail="Chat ID already exists",  # 指定的 Chat ID 已存在
-    )
-
-    INVALID_ROLE_EXCEPTION = HTTPException(
-        status_code=463,  # 自定义状态码：463 - 角色无效
-        detail="Invalid role",  # 角色无效
-    )
-
-    # ================ 业务逻辑相关异常 (Business logic related exceptions) ================
-    RATE_LIMIT_EXCEEDED_EXCEPTION = HTTPException(
-        status_code=470,  # 自定义状态码：470 - 超过速率限制
-        detail="Rate limit exceeded, please try again later",  # 请求频率超出限制，请稍后再试
-    )
-
-    QUOTA_EXCEEDED_EXCEPTION = HTTPException(
-        status_code=471,  # 自定义状态码：471 - 额度已用完
-        detail="Your quota has been exhausted",  # 您的使用额度已用完
-    )
-
-    @classmethod
-    def create_not_found_exception(cls, resource_name: str) -> HTTPException:
-        """创建资源不存在异常"""
+    # ================ 资源不存在异常 (404 Not Found) ================
+    @staticmethod
+    def user_not_found():
+        """用户不存在"""
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{resource_name} not found"  # 资源不存在
+            detail="User not found"
+        )
+    
+    @staticmethod
+    def chat_not_found():
+        """聊天记录不存在"""
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found"
         )
 
-    @classmethod
-    def create_already_exists_exception(cls, resource_name: str) -> HTTPException:
-        """创建资源已存在异常"""
+    @staticmethod
+    def message_not_found():
+        """消息不存在"""
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found"
+        )
+
+    @staticmethod
+    def resource_not_found(resource_name: str):
+        """通用资源不存在"""
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{resource_name} not found"
+        )
+
+    # ================ 冲突异常 (409 Conflict) ================
+    @staticmethod
+    def username_exists():
+        """用户名已存在"""
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists"
+        )
+
+    @staticmethod
+    def email_exists():
+        """邮箱已被注册"""
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered"
+        )
+    
+    @staticmethod
+    def chat_id_exists():
+        """Chat ID已存在"""
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Chat ID already exists"
+        )
+
+    @staticmethod
+    def resource_exists(resource_name: str):
+        """通用资源已存在"""
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{resource_name} already exists"
+        )
+
+    # ================ 请求错误异常 (400 Bad Request) ================
+    @staticmethod
+    def invalid_email_format():
+        """邮箱格式无效"""
         return HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{resource_name} already exists"  # 资源已存在
+            detail="Invalid email format"
         )
-        
-    @classmethod
-    def create_custom_exception(
-        cls, 
+    
+    @staticmethod
+    def invalid_invite_code():
+        """无效邀请码"""
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid invite code"
+        )
+
+    @staticmethod
+    def invalid_role():
+        """角色无效"""
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role"
+        )
+
+    @staticmethod
+    def validation_error(detail: str):
+        """验证错误"""
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail
+        )
+
+    # ================ 速率限制异常 (429 Too Many Requests) ================
+    @staticmethod
+    def rate_limit_exceeded():
+        """请求频率超出限制"""
+        return HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded, please try again later"
+        )
+
+    # ================ 服务器错误异常 (5xx) ================
+    @staticmethod
+    def internal_server_error(detail: str = "Internal server error"):
+        """内部服务器错误"""
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail
+        )
+
+    @staticmethod
+    def service_unavailable():
+        """服务不可用"""
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service temporarily unavailable, please try again later"
+        )
+
+    # ================ 通用异常创建方法 ================
+    @staticmethod
+    def create_exception(
         status_code: int, 
         detail: str, 
         headers: Optional[Dict[str, str]] = None

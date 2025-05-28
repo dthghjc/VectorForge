@@ -52,19 +52,19 @@ async def get_current_user(
         username: str = payload.get("sub")
         # 如果 payload 中没有 sub 字段，则抛出异常
         if username is None:
-            raise APIExceptions.TOKEN_INVALID_EXCEPTION
+            raise APIExceptions.token_invalid()
     except JWTError:
         # 如果令牌无效（例如签名错误、过期等），捕获异常并抛出异常。
-        raise APIExceptions.TOKEN_INVALID_EXCEPTION
+        raise APIExceptions.token_invalid()
     
     # 使用新的CRUD方法
     user = user_crud.get_user_by_username(db, username)
     if user is None:
-        raise APIExceptions.USER_NOT_FOUND_EXCEPTION
+        raise APIExceptions.user_not_found()
     
     # 用户处于非活动状态
     if not user.is_active:
-        raise APIExceptions.INACTIVE_USER_EXCEPTION
+        raise APIExceptions.inactive_user()
     
     # 返回经过验证的 User 对象，供后续接口使用。
     return user
@@ -95,15 +95,15 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
         invite_codes = settings.invite_codes_list
         # 只有当邀请码列表不为空时才验证邀请码
         if invite_codes and user_in.invite_code not in invite_codes:
-            raise APIExceptions.INVALID_INVITE_CODE_EXCEPTION
+            raise APIExceptions.invalid_invite_code()
         
         # 检查用户名是否存在
         if user_crud.get_user_by_username(db, user_in.username):
-            raise APIExceptions.USERNAME_EXISTS_EXCEPTION
+            raise APIExceptions.username_exists()
         
         # 检查邮箱是否存在
         if user_in.email and user_crud.get_user_by_email(db, user_in.email):
-            raise APIExceptions.EMAIL_EXISTS_EXCEPTION
+            raise APIExceptions.email_exists()
         
         # 创建用户数据（移除 nickname 字段）
         user_create = UserCreate(
@@ -118,7 +118,7 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
         return user
     except RequestException as e:
         # 处理网络或服务器错误
-        raise APIExceptions.NETWORK_ERROR_EXCEPTION from e
+        raise APIExceptions.service_unavailable() from e
 
 # 获取 JWT 访问令牌
 @router.post("/token", response_model=Token, operation_id="get_access_token")
@@ -133,10 +133,10 @@ async def login_access_token(
     user = user_crud.authenticate_user(db, form_data.username, form_data.password)
     
     if not user:
-        raise APIExceptions.INCORRECT_PASSWORD_EXCEPTION
+        raise APIExceptions.incorrect_password()
     
     if not user.is_active:
-        raise APIExceptions.INACTIVE_USER_EXCEPTION
+        raise APIExceptions.inactive_user()
     
     # 更新最后登录时间
     from datetime import datetime
@@ -175,11 +175,11 @@ def require_role(required_role: str):
 def get_current_reviewer(current_user: User = Depends(get_current_user)) -> User:
     """获取当前审核员用户"""
     if not current_user.can_review:
-        raise HTTPException(status_code=403, detail="需要审核员权限")
+        raise APIExceptions.reviewer_required()
     return current_user
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
     """获取当前管理员用户"""
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="需要管理员权限")
+        raise APIExceptions.admin_required()
     return current_user
