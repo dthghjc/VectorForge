@@ -40,6 +40,11 @@ class User(Base, TimestampMixin):
     audit_records = relationship("MessageAudit", back_populates="reviewer", cascade="all, delete-orphan")
     
     def __repr__(self):
+        """返回用户的字符串表示
+        
+        Returns:
+            str: 包含用户ID、用户名和角色的格式化字符串
+        """
         return f"<User(id={self.id}, username={self.username}, role={self.role.value})>"
     
     @property
