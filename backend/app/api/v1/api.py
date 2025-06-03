@@ -1,11 +1,22 @@
 from fastapi import APIRouter
 
-from app.api.v1.sql import auth, chat, audit
-from app.api.v1.dify.api import dify_router
+from app.api.v1.auth.router import router as auth_router
+from app.api.v1.chat.router import router as chat_router
+from app.api.v1.chat.conversation import conversation_router
+from app.api.v1.audit.router import router as audit_router
+from app.api.v1.vectors.router import router as vectors_router
+from app.api.v1.integrations.dify.api import router as dify_router
 
 api_router = APIRouter()
 
-api_router.include_router(auth.router, prefix="/v1/auth", tags=["auth"])
-api_router.include_router(chat.router, prefix="/v1/chats", tags=["chats"])
-api_router.include_router(audit.router, prefix="/v1/audit", tags=["audit"])
-api_router.include_router(dify_router, prefix="/v1", tags=["dify"])
+# Core APIs
+api_router.include_router(auth_router, prefix="/auth", tags=["认证"])
+api_router.include_router(chat_router, prefix="/chats", tags=["对话管理"])
+api_router.include_router(conversation_router, prefix="/chats", tags=["AI对话"])
+api_router.include_router(audit_router, prefix="/audit", tags=["审核标注"])
+
+# Vector management APIs
+api_router.include_router(vectors_router, prefix="/vectors", tags=["向量管理"])
+
+# Third-party integration APIs
+api_router.include_router(dify_router, prefix="/integrations/dify", tags=["Dify集成"])

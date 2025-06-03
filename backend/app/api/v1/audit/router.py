@@ -8,7 +8,7 @@ from app.models.chat import Message
 from app.schemas.chat import MessageAuditCreate, MessageAuditResponse, MessageUpdate
 from app.schemas.user import UserBrief
 from app.crud.user import user_crud, audit_crud
-from app.api.v1.sql.auth import get_current_reviewer, get_current_admin, get_current_user
+from app.api.v1.auth.router import get_current_reviewer, get_current_admin, get_current_user
 
 router = APIRouter()
 

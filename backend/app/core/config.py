@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     
     # 服务器配置
     SERVER_HOST: str = Field(default="0.0.0.0", description="服务器主机")
-    SERVER_PORT: int = Field(default=8000, ge=1, le=65535, description="服务器端口")
+    SERVER_PORT: int = Field(default=8009, ge=1, le=65535, description="服务器端口")
     
     # 外部访问地址（可选，用于生成文档等）
     SERVER_EXTERNAL_URL: Optional[AnyHttpUrl] = Field(default=None, description="外部访问地址")
@@ -43,7 +43,10 @@ class Settings(BaseSettings):
         """获取服务器完整地址"""
         if self.SERVER_EXTERNAL_URL:
             return str(self.SERVER_EXTERNAL_URL)
-        return f"http://{self.SERVER_HOST}:{self.SERVER_PORT}"
+        
+        # 如果是0.0.0.0，则替换为localhost以便浏览器访问
+        host = "localhost" if self.SERVER_HOST == "0.0.0.0" else self.SERVER_HOST
+        return f"http://{host}:{self.SERVER_PORT}"
     
     # ========== 安全配置 ==========
     # JWT 配置
@@ -55,18 +58,8 @@ class Settings(BaseSettings):
         description="访问令牌过期时间（分钟）"
     )
     
-    # 邀请码配置
-    INVITE_CODES: str = Field(default="", description="邀请码列表，逗号分隔")
-    
     # Dify API Keys 配置
     DIFY_API_KEYS: str = Field(default="", description="Dify API Keys，逗号分隔")
-    
-    @property
-    def invite_codes_list(self) -> List[str]:
-        """获取邀请码列表"""
-        if not self.INVITE_CODES:
-            return []
-        return [code.strip() for code in self.INVITE_CODES.split(",") if code.strip()]
     
     @property
     def dify_api_keys_list(self) -> List[str]:
@@ -215,7 +208,7 @@ class Settings(BaseSettings):
     
     # CORS 配置
     CORS_ORIGINS: str = Field(
-        default="http://localhost:3000,http://localhost:5173", 
+        default="http://localhost:3000", 
         description="允许的跨域源，逗号分隔"
     )
     

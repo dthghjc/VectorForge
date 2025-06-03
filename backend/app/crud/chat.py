@@ -46,7 +46,7 @@ class ChatCRUD:
         if not chat:
             return None
         
-        update_data = chat_update.dict(exclude_unset=True)
+        update_data = chat_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(chat, field, value)
         
@@ -82,7 +82,7 @@ class MessageCRUD:
     @staticmethod
     def create_message(db: Session, message_create: MessageCreate) -> Message:
         """创建新消息"""
-        message = Message(**message_create.dict())
+        message = Message(**message_create.model_dump())
         db.add(message)
         db.commit()
         db.refresh(message)

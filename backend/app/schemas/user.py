@@ -16,13 +16,11 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=128)
-    invite_code: Optional[str] = None
-    role: UserRole = UserRole.USER
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    avatar_url: Optional[str] = Field(None, max_length=500)
-    preferences: Optional[Dict[str, Any]] = None
+    avatar_url: Optional[str] = Field(None, max_length=500, description="用户头像URL地址")
+    preferences: Optional[Dict[str, Any]] = Field(None, description="用户偏好设置，如界面主题、通知设置等")
 
 class UserAdminUpdate(UserUpdate):
     """管理员可修改的字段"""
@@ -66,7 +64,6 @@ class UserRegister(BaseModel):
     username: str = Field(..., min_length=4, max_length=64)
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
-    invite_code: str = Field(..., description="邀请码")
 
     @field_validator('username')
     @classmethod
@@ -78,7 +75,7 @@ class UserRegister(BaseModel):
 # === 审核相关 ===
 class MessageAuditCreate(BaseModel):
     message_id: str
-    status: str = Field(..., regex="^(pending|approved|rejected)$")
+    status: str = Field(..., pattern="^(pending|approved|rejected)$")
     comment: Optional[str] = None
 
 class MessageAuditResponse(BaseModel):

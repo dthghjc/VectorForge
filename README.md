@@ -1,3 +1,8 @@
+`uv run uvicorn app.main:app`
+
+
+
+
 VectorForge/
 ├── .cursor/                         # Cursor 编辑器配置
 │   ├── cursorrules                  # 全局协作规则（可选）

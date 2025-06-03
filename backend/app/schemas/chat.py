@@ -24,14 +24,19 @@ class MessageResponse(MessageBase):
 
 class MessageUpdate(BaseModel):
     """消息更新（审核相关）"""
-    audit_status: Optional[str] = Field(None, regex="^(pending|approved|rejected)$")
-    is_flagged: Optional[str] = Field(None, regex="^[01]$")
+    audit_status: Optional[str] = Field(None, pattern="^(pending|approved|rejected)$")
+    is_flagged: Optional[str] = Field(None, pattern="^[01]$")
 
 class ChatBase(BaseModel):
     title: Optional[str] = None
 
 class ChatCreate(ChatBase):
     id: Optional[str] = None
+
+class ChatUpdate(BaseModel):
+    """对话更新"""
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 class ChatResponse(ChatBase):
     id: str
@@ -47,7 +52,7 @@ class ChatResponse(ChatBase):
 # === 审核相关 ===
 class MessageAuditCreate(BaseModel):
     message_id: str
-    status: str = Field(..., regex="^(pending|approved|rejected)$")
+    status: str = Field(..., pattern="^(pending|approved|rejected)$")
     comment: Optional[str] = None
 
 class MessageAuditResponse(BaseModel):

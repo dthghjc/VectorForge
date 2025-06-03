@@ -1,19 +1,18 @@
 from datetime import timedelta
-from typing import Any
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from requests.exceptions import RequestException
 import re
-import uuid
 
 from app.core import security
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import Token
-from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin
+from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin, UserAdminUpdate
 from app.crud.user import user_crud
 from app.core.exceptions import APIExceptions
 
@@ -88,15 +87,8 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
     - username: 必填，用户名
     - password: 必填，密码
     - email: 必填，邮箱
-    - invite_code: 必填，邀请码
     """
     try:
-        # 验证邀请码
-        invite_codes = settings.invite_codes_list
-        # 只有当邀请码列表不为空时才验证邀请码
-        if invite_codes and user_in.invite_code not in invite_codes:
-            raise APIExceptions.invalid_invite_code()
-        
         # 检查用户名是否存在
         if user_crud.get_user_by_username(db, user_in.username):
             raise APIExceptions.username_exists()
@@ -105,12 +97,11 @@ async def register(*, db: Session = Depends(get_db), user_in: UserRegister) -> A
         if user_in.email and user_crud.get_user_by_email(db, user_in.email):
             raise APIExceptions.email_exists()
         
-        # 创建用户数据（移除 nickname 字段）
+        # 创建用户数据
         user_create = UserCreate(
             username=user_in.username,
             email=user_in.email,
-            password=user_in.password,
-            invite_code=user_in.invite_code
+            password=user_in.password
         )
         
         # 使用CRUD创建用户
@@ -183,3 +174,61 @@ def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_superuser:
         raise APIExceptions.admin_required()
     return current_user
+
+# === 管理员用户管理接口 ===
+@router.get("/admin/users", response_model=List[UserResponse])
+async def get_all_users(
+    skip: int = 0,
+    limit: int = 100,
+    role: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    获取所有用户列表（管理员权限）
+    """
+    from app.models.user import UserRole
+    
+    # 转换role参数
+    user_role = None
+    if role:
+        try:
+            user_role = UserRole(role)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid role")
+    
+    users = user_crud.get_users(
+        db=db, 
+        skip=skip, 
+        limit=limit, 
+        role=user_role, 
+        is_active=is_active
+    )
+    return users
+
+@router.put("/admin/users/{user_id}", response_model=UserResponse)
+async def admin_update_user(
+    user_id: str,
+    user_update: UserAdminUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    管理员修改用户信息（包括角色）
+    """
+    # 检查目标用户是否存在
+    target_user = user_crud.get_user_by_id(db, user_id)
+    if not target_user:
+        raise APIExceptions.user_not_found()
+    
+    # 不能修改自己的角色
+    if target_user.id == current_user.id and user_update.role is not None:
+        raise HTTPException(status_code=400, detail="不能修改自己的角色")
+    
+    # 使用管理员更新方法
+    updated_user = user_crud.admin_update_user(db, user_id, user_update)
+    if not updated_user:
+        raise APIExceptions.user_not_found()
+    
+    return updated_user

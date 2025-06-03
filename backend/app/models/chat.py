@@ -22,7 +22,7 @@ class Message(Base, TimestampMixin):
     __tablename__ = 'messages'
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    role = Column(String(255), nullable=False)
+    role = Column(String(255), nullable=False, comment="消息角色: user/assistant/system")
     content = Column(LONGTEXT, nullable=False)
     chat_id = Column(String(36), ForeignKey("chats.id"), nullable=False)  # 外键约束
     meta_data = Column(JSON, nullable=True)

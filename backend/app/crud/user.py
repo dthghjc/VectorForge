@@ -5,6 +5,9 @@ from app.models.user import User, UserRole, MessageAudit
 from app.schemas.user import UserCreate, UserUpdate, UserAdminUpdate
 from passlib.context import CryptContext
 
+# 创建密码加密上下文，使用 bcrypt 算法进行密码哈希
+# schemes=["bcrypt"]: 指定使用 bcrypt 算法
+# deprecated="auto": 自动处理已废弃的哈希方案
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserCRUD:
@@ -46,8 +49,10 @@ class UserCRUD:
         """创建用户"""
         hashed_password = UserCRUD.get_password_hash(user_create.password)
         
-        user_data = user_create.dict(exclude={"password"})
+        user_data = user_create.model_dump(exclude={"password"})
         user_data["hashed_password"] = hashed_password
+        # 强制设置为普通用户角色，注册时不允许自定义角色
+        user_data["role"] = UserRole.USER
         
         user = User(**user_data)
         db.add(user)
@@ -62,7 +67,7 @@ class UserCRUD:
         if not user:
             return None
         
-        update_data = user_update.dict(exclude_unset=True)
+        update_data = user_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(user, field, value)
         
@@ -77,7 +82,7 @@ class UserCRUD:
         if not user:
             return None
         
-        update_data = user_update.dict(exclude_unset=True)
+        update_data = user_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(user, field, value)
         

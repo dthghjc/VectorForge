@@ -45,12 +45,11 @@ def test_config_loading():
         print(f"  允许文件类型列表: {settings.allowed_file_types_list}")
         print(f"  数据库 URL: {settings.database_url}")
         print(f"  服务器 URL: {settings.server_url}")
-        print(f"  邀请码列表: {settings.invite_codes_list}")
         
         print(f"\n🔐 安全配置:")
-        print(f"  SECRET_KEY 长度: {len(settings.SECRET_KEY)} 字符")
-        print(f"  JWT 算法: {settings.ALGORITHM}")
-        print(f"  令牌过期时间: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} 分钟")
+        print(f"  JWT密钥长度: {len(settings.SECRET_KEY)}")
+        print(f"  JWT算法: {settings.ALGORITHM}")
+        print(f"  Token过期时间: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} 分钟")
         
         print(f"\n🗄️ 数据库配置:")
         print(f"  数据库类型: {settings.DATABASE_TYPE}")
