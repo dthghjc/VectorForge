@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     
     # ========== FastAPI 服务配置 ==========
     # API 配置
-    API_V1_STR: str = Field(default="/v1", description="API v1 前缀")
     OPENAPI_VERSION: str = Field(default="3.1.0", description="OpenAPI 版本")
     
     # 服务器配置
@@ -180,6 +179,7 @@ class Settings(BaseSettings):
         default="INFO", 
         description="日志级别"
     )
+    # KiraLays
     LOG_FILE: Optional[str] = Field(default=None, description="日志文件路径")
     LOG_FORMAT: str = Field(
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
