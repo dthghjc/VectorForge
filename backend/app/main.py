@@ -85,7 +85,7 @@ def create_root_app() -> FastAPI:
             "api_version": "v1",
             "project": settings.PROJECT_NAME,
             "version": settings.VERSION,
-            "environment": settings.ENVIRONMENT
+            "environment": settings.ENVIRONMENT,
         }
     
     # 根路由
