@@ -88,6 +88,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt 
 
+# 生成和验证 API Key
 def generate_api_key() -> str:
     """生成 API Key"""
     return f"vf-{secrets.token_urlsafe(32)}"
@@ -100,28 +101,19 @@ def verify_api_key(api_key: str, hashed_key: str) -> bool:
     """验证 API Key"""
     return hash_api_key(api_key) == hashed_key
 
-async def get_api_key_user(
-    api_key: str = Security(api_key_header),
-    db: Session = Depends(get_db)
-) -> User:
-    """通过 API Key 获取用户"""
+async def verify_api_key_access(
+    api_key: str = Security(api_key_header)
+) -> bool:
+    """验证 API Key 访问权限"""
     from app.core.exceptions import APIExceptions
     
     if not api_key:
         raise APIExceptions.api_key_invalid()
     
-    # 这里简化处理，实际项目中应该有专门的 API Key 表
-    # 目前使用配置中的 API Key 进行验证
+    # 验证 API Key 是否在有效列表中
     valid_api_keys = settings.dify_api_keys_list
     
     if not valid_api_keys or api_key not in valid_api_keys:
         raise APIExceptions.api_key_invalid()
     
-    # 返回系统用户或创建专门的 API 用户
-    # 这里简化处理，返回第一个管理员用户
-    from app.crud.user import user_crud
-    admin_user = user_crud.get_first_admin(db)
-    if not admin_user:
-        raise APIExceptions.api_key_invalid()
-    
-    return admin_user 
+    return True 

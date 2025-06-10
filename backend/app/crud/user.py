@@ -121,6 +121,22 @@ class UserCRUD:
         return db.query(User).filter(User.role == UserRole.ADMIN).first()
     
     @staticmethod
+    def create_dify_user(db: Session, user_id: str) -> User:
+        """创建来自Dify的用户（自动生成用户信息）"""
+        user = User(
+            id=user_id,
+            username=f"dify_user_{user_id}",
+            email=f"dify_{user_id}@system.local",
+            hashed_password="",  # Dify用户不需要密码
+            role=UserRole.USER,
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    
+    @staticmethod
     def update_annotation_stats(db: Session, user_id: str, approved: bool = True):
         """更新用户标注统计"""
         user = UserCRUD.get_user_by_id(db, user_id)

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.integrations.dify import conversations
+from app.dify_api.v1 import conversations
 
 router = APIRouter()
 
