@@ -1,0 +1,428 @@
+.login-page {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  .login-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 0;
+    position: relative;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 32px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      gap: 12px;
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+
+      .logo-icon {
+        font-size: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #374151, #1f2937);
+        border-radius: 12px;
+        filter: drop-shadow(0 2px 8px rgba(55, 65, 81, 0.3));
+      }
+
+      .logo-text {
+        font-size: 24px;
+        font-weight: 600;
+        color: #24292f;
+        letter-spacing: -0.5px;
+      }
+    }
+
+    .login-title {
+      color: #24292f !important;
+      margin-bottom: 8px !important;
+      font-weight: 600 !important;
+      font-size: 24px !important;
+      text-align: center !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+
+    .login-subtitle {
+      color: #656d76;
+      font-size: 16px;
+      line-height: 1.5;
+      text-align: center;
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+
+  .login-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(55, 65, 81, 0.15);
+    padding: 32px;
+
+    .ant-card-body {
+      padding: 0;
+    }
+  }
+
+  .login-form {
+    text-align: left;
+    
+    .ant-form-item {
+      margin-bottom: 20px;
+    }
+
+    .ant-form-item-label {
+      padding-bottom: 6px;
+
+      label {
+        color: #24292f;
+        font-weight: 600;
+        font-size: 14px;
+      }
+    }
+
+    .login-input {
+      height: 44px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      transition: all 0.2s ease;
+      font-size: 14px;
+
+      &:hover {
+        border-color: #374151;
+      }
+
+      &:focus,
+      &.ant-input-focused {
+        border-color: #374151;
+        box-shadow: 0 0 0 3px rgba(55, 65, 81, 0.1);
+      }
+
+      .ant-input {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding-left: 12px;
+        font-size: 14px;
+        color: #24292f;
+
+        &::placeholder {
+          color: #656d76;
+        }
+      }
+
+      .input-prefix-icon {
+        color: #656d76;
+        margin-left: 12px;
+        font-size: 16px;
+      }
+    }
+
+    .login-options {
+      margin-bottom: 24px;
+
+      .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .ant-checkbox-wrapper {
+          color: #24292f;
+          font-size: 14px;
+
+          .ant-checkbox {
+            .ant-checkbox-inner {
+              border-color: #d1d5db;
+              border-radius: 4px;
+            }
+
+            &.ant-checkbox-checked .ant-checkbox-inner {
+              background-color: #374151;
+              border-color: #374151;
+            }
+          }
+        }
+
+        .forgot-link {
+          color: #374151;
+          font-size: 14px;
+          text-decoration: none;
+          transition: color 0.2s ease;
+
+          &:hover {
+            color: #1f2937;
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+
+    .login-button {
+      height: 44px;
+      border-radius: 8px;
+      background: #374151;
+      border: 1px solid #374151;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: #1f2937;
+        border-color: #1f2937;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(55, 65, 81, 0.4);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      &.ant-btn-loading {
+        background: #374151;
+        border-color: #374151;
+      }
+    }
+  }
+
+  .login-footer {
+    margin-top: 24px;
+
+    .signup-prompt {
+      text-align: center !important;
+      margin-bottom: 20px;
+
+      .ant-typography {
+        color: #656d76;
+        font-size: 14px;
+        text-align: center !important;
+      }
+
+      .signup-link {
+        color: #374151;
+        font-weight: 500;
+        text-decoration: none;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #1f2937;
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .demo-info {
+      .ant-alert {
+        border-radius: 8px;
+        border: 1px solid #e1e8ed;
+        background: #f6f8fa;
+
+        .ant-alert-message {
+          color: #24292f;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .ant-alert-description {
+          color: #656d76;
+          font-size: 13px;
+          font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+
+          .ant-space-item {
+            padding: 2px 0;
+          }
+        }
+
+        .anticon-info-circle {
+          color: #374151;
+        }
+      }
+    }
+  }
+}
+
+// 深色模式支持
+ @media (prefers-color-scheme: dark) {
+   .login-page {
+     background-color: #111827;
+
+    .login-header {
+      .logo-text {
+        color: #f0f6fc;
+      }
+
+      .login-title {
+        color: #f0f6fc !important;
+      }
+
+      .login-subtitle {
+        color: #8b949e;
+      }
+    }
+
+    .login-card {
+      background: #161b22;
+      border-color: #30363d;
+    }
+
+    .login-form {
+      .ant-form-item-label label {
+        color: #f0f6fc;
+      }
+
+      .login-input {
+        background: #0d1117;
+        border-color: #30363d;
+        color: #f0f6fc;
+
+                 &:hover {
+           border-color: #374151;
+         }
+
+        .ant-input {
+          background: transparent;
+          color: #f0f6fc;
+
+          &::placeholder {
+            color: #8b949e;
+          }
+        }
+
+        .input-prefix-icon {
+          color: #8b949e;
+        }
+      }
+
+      .login-options {
+        .form-options {
+          .ant-checkbox-wrapper {
+            color: #f0f6fc;
+
+            .ant-checkbox .ant-checkbox-inner {
+              background: #0d1117;
+              border-color: #30363d;
+            }
+          }
+        }
+      }
+    }
+
+    .login-footer {
+      .signup-prompt .ant-typography {
+        color: #8b949e;
+      }
+
+      .demo-info .ant-alert {
+        background: #161b22;
+        border-color: #30363d;
+
+        .ant-alert-message {
+          color: #f0f6fc;
+        }
+
+        .ant-alert-description {
+          color: #8b949e;
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .login-page {
+    padding: 16px;
+
+    .login-container {
+      max-width: 100%;
+    }
+
+    .login-card {
+      padding: 24px;
+      border-radius: 8px;
+    }
+
+    .login-header {
+      margin-bottom: 24px;
+
+      .logo {
+        margin-bottom: 20px;
+
+        .logo-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 24px;
+        }
+
+        .logo-text {
+          font-size: 20px;
+        }
+      }
+
+      .login-title {
+        font-size: 20px !important;
+      }
+
+      .login-subtitle {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 12px;
+
+    .login-card {
+      padding: 20px;
+      margin: 0;
+    }
+
+    .login-header {
+      .login-title {
+        font-size: 18px !important;
+      }
+    }
+  }
+}
+
+// 动画效果
+.login-page {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

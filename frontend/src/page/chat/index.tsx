@@ -19,6 +19,7 @@ import {
     ShareAltOutlined,
     SmileOutlined,
   } from '@ant-design/icons';
+  import UserAvatar from '../../components/UserAvatar';
   import {
     Attachments,
     Bubble,
@@ -461,7 +462,7 @@ import {
         />
   
         <div className={styles.siderFooter}>
-          <Avatar size={24} />
+          <UserAvatar />
           <Button type="text" icon={<QuestionCircleOutlined />} />
         </div>
       </div>
