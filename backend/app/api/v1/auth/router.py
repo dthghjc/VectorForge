@@ -15,6 +15,9 @@ from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin, UserAdminUpdate
 from app.crud.user import user_crud
 from app.core.exceptions import APIExceptions
+from app.models.user import UserRole
+
+
 
 router = APIRouter()  # 创建一个名为 "router" 的 API 路由器
 # 定义 JWT 认证的 token 端点（/token），客户端通过此端点获取 token。
@@ -22,7 +25,7 @@ router = APIRouter()  # 创建一个名为 "router" 的 API 路由器
 JWT 是在用户登录时（例如通过 /token 端点）动态生成的，而不是为每个用户预先分配一个固定的 JWT。
 每次用户成功认证（提供正确的用户名和密码），服务器会生成一个新的 JWT，包含该用户的身份信息（例如 sub 字段）和过期时间（exp）
 """
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/token") 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token") 
 
 """
 Depends 是 FastAPI 提供的一个依赖注入工具，允许函数在调用时自动解析和提供参数，而无需手动传入。
@@ -188,7 +191,7 @@ async def get_all_users(
     """
     获取所有用户列表（管理员权限）
     """
-    from app.models.user import UserRole
+    
     
     # 转换role参数
     user_role = None
