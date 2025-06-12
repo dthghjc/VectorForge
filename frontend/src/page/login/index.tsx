@@ -1,52 +1,58 @@
-import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, Checkbox, message } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService, authUtils, type LoginRequest } from '../../api/auth';
+import { login, getCurrentUser, type LoginData } from '../../api/auth';
 import './index.scss';
+import { useState } from 'react';
+import { useDispatch } from "react-redux";
+import { setToken, setUserInfo } from "../../store/login/authSlice";
+import type { AppDispatch } from "../../store";
+import { getLoginErrorMessage } from "../../utils/errorHandler";
 
 const { Title, Text } = Typography;
 
-const LoginPage: React.FC = () => {
+function LoginPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleLogin = async (values: LoginRequest) => {
-    setLoading(true);
-    try {
-      // 调用登录API
-      const response = await authService.login(values);
-      
-      // 保存Token
-      authUtils.saveToken(response.access_token);
-      
-      // 获取用户信息并保存
+  function handleLogin(): void {
+    form.validateFields().then(async (res: LoginData) => {
+      setLoading(true);
       try {
-        const userInfo = await authService.getCurrentUser();
-        authUtils.saveUserInfo(userInfo);
-      } catch (error) {
-        console.warn('获取用户信息失败，但登录成功:', error);
+        // 1. 调用登录API获取token
+        const tokenResponse = await login(res);
+        const { access_token, token_type } = tokenResponse;
+        
+        // 2. 存储token到Redux
+        dispatch(setToken(access_token));
+        
+        // 3. 获取用户信息
+        const userInfo = await getCurrentUser(access_token);
+        
+        // 4. 存储用户信息到Redux和sessionStorage
+        dispatch(setUserInfo(userInfo));
+        sessionStorage.setItem("username", userInfo.username);
+        sessionStorage.setItem("userRole", userInfo.role);
+        
+        console.log('登录成功:', { token: access_token, user: userInfo });
+        message.success(`欢迎回来，${userInfo.username}！`);
+        navigate("/chat", { replace: true });
+      } catch (err: any) {
+        console.error('Login error:', err);
+        const errorMsg = getLoginErrorMessage(err);
+        message.error(errorMsg);
+      } finally {
+        setLoading(false);
       }
-      
-      message.success('登录成功！');
-      navigate('/');
-    } catch (error: any) {
-      console.error('Login error:', error);
-      let errorMessage = '登录失败，请检查用户名和密码';
-      
-      if (error?.detail) {
-        errorMessage = error.detail;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      message.error(errorMessage);
-    } finally {
+    }).catch((err: any) => {
       setLoading(false);
-    }
-  };
+      console.log(err);
+      message.error('表单验证失败，请检查输入');
+    });
+  }
 
   return (
     <div className="login-page">
@@ -70,7 +76,6 @@ const LoginPage: React.FC = () => {
           <Form
             form={form}
             name="login"
-            onFinish={handleLogin}
             autoComplete="off"
             layout="vertical"
             size="large"
@@ -124,7 +129,7 @@ const LoginPage: React.FC = () => {
             <Form.Item>
               <Button
                 type="primary"
-                htmlType="submit"
+                onClick={handleLogin}
                 loading={loading}
                 className="login-button"
                 block
@@ -149,6 +154,6 @@ const LoginPage: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default LoginPage;
