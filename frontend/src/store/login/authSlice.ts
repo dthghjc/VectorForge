@@ -1,27 +1,25 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-
-// 用户信息类型
-interface UserInfo {
-    id: string;
-    username: string;
-    email?: string;
-    role: 'user' | 'reviewer' | 'admin';
-    is_active: boolean;
-    avatar_url?: string;
-}
+import type { SimpleUserInfo } from "../../api/auth";
 
 // 状态类型定义
 interface AuthState {
     token: string | null;
-    userInfo: UserInfo | null;
+    userInfo: SimpleUserInfo | null;
     isAuthenticated: boolean;
 }
 
 // 从sessionStorage恢复用户信息
-const getUserInfoFromStorage = (): UserInfo | null => {
+const getUserInfoFromStorage = (): SimpleUserInfo | null => {
     try {
-        const userInfo = sessionStorage.getItem("userInfo");
-        return userInfo ? JSON.parse(userInfo) : null;
+        const username = sessionStorage.getItem("username");
+        const role = sessionStorage.getItem("userRole");
+        if (username && role) {
+            return {
+                username,
+                role: role as 'user' | 'reviewer' | 'admin'
+            };
+        }
+        return null;
     } catch {
         return null;
     }
@@ -43,9 +41,10 @@ export const authSlice = createSlice({
             state.isAuthenticated = true;
             sessionStorage.setItem("token", action.payload);
         },
-        setUserInfo: (state, action: PayloadAction<UserInfo>) => {
+        setUserInfo: (state, action: PayloadAction<SimpleUserInfo>) => {
             state.userInfo = action.payload;
-            sessionStorage.setItem("userInfo", JSON.stringify(action.payload));
+            sessionStorage.setItem("username", action.payload.username);
+            sessionStorage.setItem("userRole", action.payload.role);
         },
         clearAuth: (state) => {
             state.token = null;
@@ -54,7 +53,6 @@ export const authSlice = createSlice({
             sessionStorage.removeItem("token");
             sessionStorage.removeItem("username");
             sessionStorage.removeItem("userRole");
-            sessionStorage.removeItem("userInfo");
         }
     }
 });

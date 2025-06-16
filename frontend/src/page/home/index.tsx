@@ -8,12 +8,13 @@ import {
   MenuUnfoldOutlined,
   PieChartOutlined,
   UserOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { Menu, Avatar, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
 
 const menuItems: Required<MenuProps>['items'] = [
-  { key: '1', icon: <PieChartOutlined />, label: '仪表盘' },
+  { key: '1', icon: <MessageOutlined />, label: 'Chat' },
   { key: '2', icon: <DesktopOutlined />, label: '工作台' },
   { key: '3', icon: <ContainerOutlined />, label: '内容管理' },
   {
@@ -52,7 +53,7 @@ const userMenu: MenuProps = {
 };
 
 const FancySideMenu: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <div

@@ -1,13 +1,14 @@
 import { Form, Input, Button, Card, Typography, Checkbox, message } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
-import { login, getCurrentUser, type LoginData } from '../../api/auth';
+import { login, type LoginData, type SimpleUserInfo } from '../../api/auth';
 import './index.scss';
 import { useState } from 'react';
 import { useDispatch } from "react-redux";
 import { setToken, setUserInfo } from "../../store/login/authSlice";
 import type { AppDispatch } from "../../store";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
+import { getCurrentUser } from '../../api/auth';
 
 const { Title, Text } = Typography;
 
@@ -22,24 +23,25 @@ function LoginPage() {
     form.validateFields().then(async (res: LoginData) => {
       setLoading(true);
       try {
-        // 1. 调用登录API获取token
+        // 1. 调用登录API获取token和角色信息
         const tokenResponse = await login(res);
-        const { access_token, token_type } = tokenResponse;
+        const { access_token, token_type, role } = tokenResponse;
         
         // 2. 存储token到Redux
         dispatch(setToken(access_token));
         
-        // 3. 获取用户信息
-        const userInfo = await getCurrentUser(access_token);
-        
-        // 4. 存储用户信息到Redux和sessionStorage
+        // 3. 存储用户信息到Redux和sessionStorage
+        const userInfo: SimpleUserInfo = {
+          username: res.username,
+          role: role
+        };
         dispatch(setUserInfo(userInfo));
-        sessionStorage.setItem("username", userInfo.username);
-        sessionStorage.setItem("userRole", userInfo.role);
+        sessionStorage.setItem("username", res.username);
+        sessionStorage.setItem("userRole", role);
         
-        console.log('登录成功:', { token: access_token, user: userInfo });
-        message.success(`欢迎回来，${userInfo.username}！`);
-        navigate("/chat", { replace: true });
+        console.log('登录成功:', { token: access_token, username: res.username, role });
+        message.success(`欢迎回来，${res.username}！`);
+        navigate("/", { replace: true });
       } catch (err: any) {
         console.error('Login error:', err);
         const errorMsg = getLoginErrorMessage(err);
@@ -80,6 +82,7 @@ function LoginPage() {
             layout="vertical"
             size="large"
             className="login-form"
+            onFinish={handleLogin}
           >
             <Form.Item
               name="username"
@@ -129,7 +132,7 @@ function LoginPage() {
             <Form.Item>
               <Button
                 type="primary"
-                onClick={handleLogin}
+                htmlType="submit"
                 loading={loading}
                 className="login-button"
                 block

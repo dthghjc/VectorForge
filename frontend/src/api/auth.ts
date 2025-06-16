@@ -1,52 +1,4 @@
-import axios from 'axios';
-import { store } from '../store';
-import { clearAuth } from '../store/login/authSlice';
-
-// API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8009';
-
-// 创建axios实例
-const authAPI = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-});
-
-// 请求拦截器 - 自动添加认证头
-authAPI.interceptors.request.use(
-  (config) => {
-    const state = store.getState();
-    const token = state.authSlice.token;
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// 响应拦截器 - 处理认证失败
-authAPI.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      console.log('Authentication failed, clearing auth state...');
-      store.dispatch(clearAuth());
-      
-      // 如果不在登录页，跳转到登录页
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    
-    return Promise.reject(error);
-  }
-);
+import http from '../utils/http/http';
 
 // 登录请求参数类型
 export interface LoginData {
@@ -58,6 +10,13 @@ export interface LoginData {
 export interface TokenResponse {
     access_token: string;
     token_type: string;
+    role: 'user' | 'reviewer' | 'admin';
+}
+
+// 简化版的用户信息类型（用于登录时）
+export interface SimpleUserInfo {
+    username: string;
+    role: 'user' | 'reviewer' | 'admin';
 }
 
 // 用户信息类型（匹配后端UserResponse）
@@ -83,24 +42,11 @@ export async function login(data: LoginData): Promise<TokenResponse> {
     formData.append('username', data.username);
     formData.append('password', data.password);
     
-    const response = await authAPI.post('/api/v1/auth/token', formData, {
+    return http.post<any, TokenResponse>('/api/v1/auth/token', formData, {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
     });
-    
-    return response.data;
-}
-
-// 获取当前用户信息
-export async function getCurrentUser(token: string): Promise<UserInfo> {
-    const response = await authAPI.post('/api/v1/auth/test_token', {}, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    
-    return response.data;
 }
 
 // 注册接口
@@ -111,6 +57,5 @@ export interface RegisterData {
 }
 
 export async function register(data: RegisterData): Promise<UserInfo> {
-    const response = await authAPI.post('/api/v1/auth/register', data);
-    return response.data;
+    return http.post<any, UserInfo>('/api/v1/auth/register', data);
 }
