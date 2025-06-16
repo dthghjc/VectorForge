@@ -24,6 +24,6 @@ function navLeft(){
     },[menuList]);
 
     async function configMenu(){
-        
+     
 
 }
