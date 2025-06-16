@@ -1,119 +1,165 @@
 import React, { useState } from 'react';
-import { AppstoreOutlined, MailOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  ContainerOutlined,
+  DesktopOutlined,
+  MailOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  PieChartOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Menu, Avatar, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
-import { Menu } from 'antd';
 
-type MenuItem = Required<MenuProps>['items'][number];
-
-const items: MenuItem[] = [
+const menuItems: Required<MenuProps>['items'] = [
+  { key: '1', icon: <PieChartOutlined />, label: '仪表盘' },
+  { key: '2', icon: <DesktopOutlined />, label: '工作台' },
+  { key: '3', icon: <ContainerOutlined />, label: '内容管理' },
   {
-    key: '1',
+    key: 'sub1',
+    label: '一级菜单',
     icon: <MailOutlined />,
-    label: 'Navigation One',
     children: [
-      { key: '11', label: 'Option 1' },
-      { key: '12', label: 'Option 2' },
-      { key: '13', label: 'Option 3' },
-      { key: '14', label: 'Option 4' },
+      { key: '5', label: '子项一' },
+      { key: '6', label: '子项二' },
     ],
   },
   {
-    key: '2',
+    key: 'sub2',
+    label: '设置',
     icon: <AppstoreOutlined />,
-    label: 'Navigation Two',
     children: [
-      { key: '21', label: 'Option 1' },
-      { key: '22', label: 'Option 2' },
+      { key: '9', label: '系统设置' },
       {
-        key: '23',
-        label: 'Submenu',
+        key: 'sub3',
+        label: '更多',
         children: [
-          { key: '231', label: 'Option 1' },
-          { key: '232', label: 'Option 2' },
-          { key: '233', label: 'Option 3' },
+          { key: '11', label: '选项 A' },
+          { key: '12', label: '选项 B' },
         ],
       },
-      {
-        key: '24',
-        label: 'Submenu 2',
-        children: [
-          { key: '241', label: 'Option 1' },
-          { key: '242', label: 'Option 2' },
-          { key: '243', label: 'Option 3' },
-        ],
-      },
-    ],
-  },
-  {
-    key: '3',
-    icon: <SettingOutlined />,
-    label: 'Navigation Three',
-    children: [
-      { key: '31', label: 'Option 1' },
-      { key: '32', label: 'Option 2' },
-      { key: '33', label: 'Option 3' },
-      { key: '34', label: 'Option 4' },
     ],
   },
 ];
 
-interface LevelKeysProps {
-  key?: string;
-  children?: LevelKeysProps[];
-}
-
-const getLevelKeys = (items1: LevelKeysProps[]) => {
-  const key: Record<string, number> = {};
-  const func = (items2: LevelKeysProps[], level = 1) => {
-    items2.forEach((item) => {
-      if (item.key) {
-        key[item.key] = level;
-      }
-      if (item.children) {
-        func(item.children, level + 1);
-      }
-    });
-  };
-  func(items1);
-  return key;
+const userMenu: MenuProps = {
+  items: [
+    { key: 'profile', label: '个人资料' },
+    { type: 'divider' },
+    { key: 'logout', label: '退出登录' },
+  ],
 };
 
-const levelKeys = getLevelKeys(items as LevelKeysProps[]);
-
-const App: React.FC = () => {
-  const [stateOpenKeys, setStateOpenKeys] = useState(['2', '23']);
-
-  const onOpenChange: MenuProps['onOpenChange'] = (openKeys) => {
-    const currentOpenKey = openKeys.find((key) => stateOpenKeys.indexOf(key) === -1);
-    // open
-    if (currentOpenKey !== undefined) {
-      const repeatIndex = openKeys
-        .filter((key) => key !== currentOpenKey)
-        .findIndex((key) => levelKeys[key] === levelKeys[currentOpenKey]);
-
-      setStateOpenKeys(
-        openKeys
-          // remove repeat key
-          .filter((_, index) => index !== repeatIndex)
-          // remove current level all child
-          .filter((key) => levelKeys[key] <= levelKeys[currentOpenKey]),
-      );
-    } else {
-      // close
-      setStateOpenKeys(openKeys);
-    }
-  };
+const FancySideMenu: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <Menu
-      mode="inline"
-      defaultSelectedKeys={['231']}
-      openKeys={stateOpenKeys}
-      onOpenChange={onOpenChange}
-      style={{ width: 256 }}
-      items={items}
-    />
+    <div
+      style={{
+        width: collapsed ? 80 : 256,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: '1px solid #f0f0f0',
+        transition: 'all 0.3s ease',
+        background: '#fff',
+      }}
+    >
+      {/* 顶部 header（包含 logo + 按钮） */}
+      <div
+        style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          borderBottom: '1px solid #f0f0f0',
+          padding: collapsed ? '0' : '0 16px',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        {/* logo */}
+        {!collapsed && (
+          <div style={{ fontSize: 20, fontWeight: 600 }}>🤓</div>
+        )}
+
+        {/* 折叠按钮 */}
+        <Button
+          type="text"
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            transition: 'transform 0.3s ease',
+          }}
+          // onMouseEnter={(e) =>
+          //   (e.currentTarget.style.transform = 'rotate(10deg)')
+          // }
+          // onMouseLeave={(e) =>
+          //   (e.currentTarget.style.transform = 'rotate(0deg)')
+          // }
+        />
+      </div>
+
+      {/* 菜单区域 */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <Menu
+          mode="inline"
+          theme="light"
+          inlineCollapsed={collapsed}
+          defaultSelectedKeys={['1']}
+          defaultOpenKeys={collapsed ? [] : ['sub1']}
+          items={menuItems}
+          style={{
+            transition: 'all 0.3s ease',
+            borderRight: 'none',
+          }}
+        />
+      </div>
+
+      {/* 用户信息区域 */}
+      <div
+        style={{
+          height: 64,
+          padding: '0 16px',
+          borderTop: '1px solid #f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <Dropdown menu={userMenu} trigger={['click']}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <Avatar icon={<UserOutlined />} />
+            <div
+              style={{
+                marginLeft: 12,
+                opacity: collapsed ? 0 : 1,
+                transition: 'opacity 0.3s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {!collapsed && (
+                <>
+                  <div style={{ fontWeight: 500 }}>用户名</div>
+                  <div style={{ fontSize: 12, color: '#999' }}>
+                    user@example.com
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Dropdown>
+      </div>
+    </div>
   );
 };
 
-export default App;
+export default FancySideMenu;
