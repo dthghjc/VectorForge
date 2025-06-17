@@ -3,12 +3,11 @@ import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@a
 import { useNavigate, Link } from 'react-router-dom';
 import { login, type LoginData, type SimpleUserInfo } from '../../api/auth';
 import './index.scss';
-import { useState } from 'react';
-import { useDispatch } from "react-redux";
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from "react-redux";
 import { setToken, setUserInfo } from "../../store/login/authSlice";
-import type { AppDispatch } from "../../store";
+import type { AppDispatch, RootState } from "../../store";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
-
 
 const { Title, Text } = Typography;
 
@@ -18,6 +17,7 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { token, username } = useSelector((state: RootState) => state.authSlice);
 
   function handleLogin(): void {
     form.validateFields().then(async (res: LoginData) => {
@@ -55,6 +55,21 @@ function LoginPage() {
       message.error('表单验证失败，请检查输入');
     });
   }
+
+  // 检查用户是否已经登录，如果已登录则跳转到首页
+  useEffect(() => {
+    if (token) {
+      navigate("/", { replace: true });
+    }
+  }, [token, navigate]);
+
+  // 监听登录状态变化，自动跳转
+  useEffect(() => {
+    if (token && username) {
+      console.log('登录状态已更新，准备跳转');
+      navigate("/", { replace: true });
+    }
+  }, [token, username, navigate]);
 
   return (
     <div className="login-page">

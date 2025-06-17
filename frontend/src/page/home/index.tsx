@@ -6,12 +6,15 @@ import {
   MailOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  PieChartOutlined,
   UserOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
 import { Menu, Avatar, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import type { RootState } from '../../store';
+import { clearToken, clearUserInfo, setMenuList } from '../../store/login/authSlice';
 
 const menuItems: Required<MenuProps>['items'] = [
   { key: '1', icon: <MessageOutlined />, label: 'Chat' },
@@ -44,16 +47,36 @@ const menuItems: Required<MenuProps>['items'] = [
   },
 ];
 
-const userMenu: MenuProps = {
-  items: [
-    { key: 'profile', label: '个人资料' },
-    { type: 'divider' },
-    { key: 'logout', label: '退出登录' },
-  ],
-};
-
 const FancySideMenu: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { username } = useSelector((state: RootState) => state.authSlice);
+
+  // 处理用户菜单点击
+  const handleUserMenuClick = (e: any) => {
+    if (e.key === 'logout') {
+      // 清除所有认证信息
+      dispatch(clearToken());
+      dispatch(clearUserInfo());
+      dispatch(setMenuList([]));
+      
+      // 跳转到登录页
+      navigate('/login', { replace: true });
+    } else if (e.key === 'profile') {
+      // 处理个人资料点击
+      console.log('跳转到个人资料页面');
+    }
+  };
+
+  const userMenu: MenuProps = {
+    items: [
+      { key: 'profile', label: '个人资料' },
+      { type: 'divider' },  // 分割线
+      { key: 'logout', label: '退出登录' },
+    ],
+    onClick: handleUserMenuClick,
+  };
 
   return (
     <div
@@ -92,12 +115,6 @@ const FancySideMenu: React.FC = () => {
           style={{
             transition: 'transform 0.3s ease',
           }}
-          // onMouseEnter={(e) =>
-          //   (e.currentTarget.style.transform = 'rotate(10deg)')
-          // }
-          // onMouseLeave={(e) =>
-          //   (e.currentTarget.style.transform = 'rotate(0deg)')
-          // }
         />
       </div>
 
@@ -149,10 +166,7 @@ const FancySideMenu: React.FC = () => {
             >
               {!collapsed && (
                 <>
-                  <div style={{ fontWeight: 500 }}>用户名</div>
-                  <div style={{ fontSize: 12, color: '#999' }}>
-                    user@example.com
-                  </div>
+                  <div style={{ fontWeight: 500 }}>{username || '用户'}</div>
                 </>
               )}
             </div>

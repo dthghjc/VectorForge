@@ -6,11 +6,6 @@ import { useMenu } from "./hooks/useMenu";
 import type { RootState } from "./store";
 
 function App() {
-  // 从 redux 中获取用户信息
-  const { userInfo } = useSelector((state: RootState) => state.authSlice);
-  
-  // 初始化菜单管理
-  useMenu();
 
   return (
     <>
