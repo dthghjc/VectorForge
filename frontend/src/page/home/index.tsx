@@ -14,7 +14,7 @@ import type { MenuProps } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
-import { clearToken, clearUserInfo, setMenuList } from '../../store/login/authSlice';
+import { clearAuth } from '../../store/login/authSlice';
 
 const menuItems: Required<MenuProps>['items'] = [
   { key: '1', icon: <MessageOutlined />, label: 'Chat' },
@@ -57,9 +57,7 @@ const FancySideMenu: React.FC = () => {
   const handleUserMenuClick = (e: any) => {
     if (e.key === 'logout') {
       // 清除所有认证信息
-      dispatch(clearToken());
-      dispatch(clearUserInfo());
-      dispatch(setMenuList([]));
+      dispatch(clearAuth());
       
       // 跳转到登录页
       navigate('/login', { replace: true });

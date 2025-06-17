@@ -1,4 +1,4 @@
-import { Form, Input, Button, Card, Typography, Checkbox, message } from 'antd';
+import { Form, Input, Button, Card, Typography, Checkbox, App } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
 import { login, type LoginData, type SimpleUserInfo } from '../../api/auth';
@@ -10,6 +10,7 @@ import type { AppDispatch, RootState } from "../../store";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
 
 const { Title, Text } = Typography;
+const { useApp } = App;
 
 function LoginPage() {
   const [form] = Form.useForm();
@@ -17,31 +18,33 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { token, username } = useSelector((state: RootState) => state.authSlice);
+  const { token, username, isAuthenticated } = useSelector((state: RootState) => state.authSlice);
+  const { message } = useApp();
 
   function handleLogin(): void {
     form.validateFields().then(async (res: LoginData) => {
       setLoading(true);
+      
       try {
         // 1. 调用登录API获取token和角色信息
         const tokenResponse = await login(res);
         const { access_token, token_type, role } = tokenResponse;
         
-        // 2. 存储token到Redux
+        // 2. 存储token到Redux（会自动同步到sessionStorage）
         dispatch(setToken(access_token));
         
-        // 3. 存储用户信息到Redux和sessionStorage
+        // 3. 存储用户信息到Redux（会自动同步到sessionStorage）
         const userInfo: SimpleUserInfo = {
           username: res.username,
           role: role
         };
         dispatch(setUserInfo(userInfo));
-        sessionStorage.setItem("username", res.username);
-        sessionStorage.setItem("userRole", role);
         
         console.log('登录成功:', { token: access_token, username: res.username, role });
         message.success(`欢迎回来，${res.username}！`);
-        navigate("/", { replace: true });
+        
+        // 跳转将由 useEffect 监听状态变化自动处理
+        
       } catch (err: any) {
         console.error('Login error:', err);
         const errorMsg = getLoginErrorMessage(err);
@@ -58,18 +61,18 @@ function LoginPage() {
 
   // 检查用户是否已经登录，如果已登录则跳转到首页
   useEffect(() => {
-    if (token) {
+    if (isAuthenticated) {
       navigate("/", { replace: true });
     }
-  }, [token, navigate]);
+  }, [isAuthenticated, navigate]);
 
   // 监听登录状态变化，自动跳转
   useEffect(() => {
-    if (token && username) {
-      console.log('登录状态已更新，准备跳转');
+    if (isAuthenticated && username) {
+      console.log('登录状态已更新，准备跳转到首页');
       navigate("/", { replace: true });
     }
-  }, [token, username, navigate]);
+  }, [isAuthenticated, username, navigate]);
 
   return (
     <div className="login-page">

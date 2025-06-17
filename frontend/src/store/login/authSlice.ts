@@ -7,6 +7,7 @@ interface AuthState {
     username: string | null;
     userRole: string | null;
     menuList: any[];
+    isAuthenticated: boolean;
 }
 
 // 初始状态
@@ -15,6 +16,7 @@ const initialState: AuthState = {
     username: sessionStorage.getItem("username") || null,
     userRole: sessionStorage.getItem("userRole") || null,
     menuList: [],
+    isAuthenticated: !!sessionStorage.getItem("token"),
 };
 
 // 创建认证相关的 slice
@@ -25,10 +27,12 @@ export const authSlice = createSlice({
     reducers: {
         setToken: (state, action: PayloadAction<string>) => {
             state.token = action.payload;
+            state.isAuthenticated = true;
             sessionStorage.setItem("token", action.payload);
         },
         clearToken: (state) => {
             state.token = null;
+            state.isAuthenticated = false;
             sessionStorage.removeItem("token");
         },
         setUserInfo: (state, action: PayloadAction<SimpleUserInfo>) => {
@@ -46,8 +50,18 @@ export const authSlice = createSlice({
         setMenuList: (state, action: PayloadAction<any[]>) => {
             state.menuList = action.payload;
         },
+        clearAuth: (state) => {
+            state.token = null;
+            state.username = null;
+            state.userRole = null;
+            state.menuList = [];
+            state.isAuthenticated = false;
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("username");
+            sessionStorage.removeItem("userRole");
+        },
     },
 });
 
-export const { setToken, clearToken, setUserInfo, clearUserInfo, setMenuList } = authSlice.actions;
+export const { setToken, clearToken, setUserInfo, clearUserInfo, setMenuList, clearAuth } = authSlice.actions;
 export default authSlice.reducer;
