@@ -8,7 +8,7 @@ import { useDispatch } from "react-redux";
 import { setToken, setUserInfo } from "../../store/login/authSlice";
 import type { AppDispatch } from "../../store";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
-import { getCurrentUser } from '../../api/auth';
+
 
 const { Title, Text } = Typography;
 
