@@ -14,26 +14,6 @@ const userMenuList = [
         "label": '工作台',
         "icon": "DesktopOutlined",
     },
-    {
-        "key": '3',
-        "label": '内容管理',
-        "icon": "ContainerOutlined",
-    },
-    {
-        "key": 'sub1',
-        "label": '一级菜单',
-        "icon": "MailOutlined",
-        "children": [
-            {
-                "key": '5',
-                "label": '子项一',
-            },
-            {
-                "key": '6',
-                "label": '子项二',
-            },
-        ]
-    },
 ];
 
 const reviewerMenuList = [
@@ -49,34 +29,8 @@ const reviewerMenuList = [
     },
     {
         "key": '3',
-        "label": '内容管理',
+        "label": '数据标注',
         "icon": "ContainerOutlined",
-    },
-    {
-        "key": 'sub1',
-        "label": '一级菜单',
-        "icon": "MailOutlined",
-        "children": [
-            {
-                "key": '5',
-                "label": '子项一',
-            },
-            {
-                "key": '6',
-                "label": '子项二',
-            },
-        ]
-    },
-    {
-        "key": 'sub2',
-        "label": '设置',
-        "icon": "AppstoreOutlined",
-        "children": [
-            {
-                "key": '9',
-                "label": '系统设置',
-            },
-        ]
     },
 ];
 
@@ -140,8 +94,7 @@ const adminMenuList = [
 
 export const useMenu = () => {
     const dispatch = useDispatch();
-    const { userRole } = useSelector((state: RootState) => state.authSlice);
-    const menuList = useSelector((state: RootState) => state.authSlice.menuList);
+    const { userRole, menuList } = useSelector((state: RootState) => state.authSlice);
 
     useEffect(() => {
         if (userRole) {

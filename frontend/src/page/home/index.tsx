@@ -15,6 +15,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
 import { clearAuth } from '../../store/login/authSlice';
+import { useMenu } from '../../hooks/useMenu';
+
 
 const menuItems: Required<MenuProps>['items'] = [
   { key: '1', icon: <MessageOutlined />, label: 'Chat' },

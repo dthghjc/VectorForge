@@ -1,47 +1,29 @@
-import { createBrowserRouter } from "react-router-dom"
 import type { RouteObject } from "react-router-dom"
-import React, { Suspense } from "react"
-import { Spin } from "antd"
+import Home from "../page/home/index";
+import Login from "../page/login/index";
+import Chat from "../page/chat/index";
+import NotFound from "../page/404/index";
+import RequireAuth from "../utils/RequireAuth";
 
-const Home=React.lazy(()=>import("../page/home/index"));
-const Login=React.lazy(()=>import("../page/login/index"));
-const Chat=React.lazy(()=>import("../page/chat/index"));
-const NotFound=React.lazy(()=>import("../page/404/index"));
-
-// 加载组件
-const LoadingComponent = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100vh' 
-  }}>
-    <Spin size="large" />
-  </div>
-);
-
-// Suspense包装器
-const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => (
-  <Suspense fallback={<LoadingComponent />}>
-    <Component />
-  </Suspense>
-);
-
-export const routers:RouteObject[]=[
+export const routers: RouteObject[] = [
     {
         path: "/",
-        element: withSuspense(Home)
+        element: <RequireAuth allowed={true} redirectTo="/login"><Home /></RequireAuth>
+    },
+    {
+        path: "/home",
+        element: <RequireAuth allowed={true} redirectTo="/login"><Home /></RequireAuth>
     },
     {
         path: "/chat",
-        element: withSuspense(Chat)
+        element: <RequireAuth allowed={true} redirectTo="/login"><Chat /></RequireAuth>
     },
     {
         path: "/login",
-        element: withSuspense(Login)
+        element: <RequireAuth allowed={false} redirectTo="/"><Login /></RequireAuth>
     },
     {
         path: "*",
-        element: withSuspense(NotFound)
-    }    
+        element: <NotFound />
+    }
 ]
