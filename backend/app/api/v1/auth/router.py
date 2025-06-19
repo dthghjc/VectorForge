@@ -143,7 +143,7 @@ async def login_access_token(
         data={"sub": user.username}, 
         expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/test_token", response_model=UserResponse, operation_id="test_access_token")
 async def test_token(current_user: User = Depends(get_current_user)):
