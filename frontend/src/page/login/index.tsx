@@ -8,7 +8,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { setToken, setUserInfo } from "../../store/login/authSlice";
 import type { AppDispatch, RootState } from "../../store";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
-
 const { Title, Text } = Typography;
 const { useApp } = App;
 
@@ -18,7 +17,7 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { token, username, isAuthenticated } = useSelector((state: RootState) => state.authSlice);
+  const { username, isAuthenticated } = useSelector((state: RootState) => state.authSlice);
   const { message } = useApp();
 
   function handleLogin(): void {
@@ -28,7 +27,7 @@ function LoginPage() {
       try {
         // 1. 调用登录API获取token和角色信息
         const tokenResponse = await login(res);
-        const { access_token, token_type, role } = tokenResponse;
+        const { access_token, role } = tokenResponse;
         
         // 2. 存储token到Redux（会自动同步到sessionStorage）
         dispatch(setToken(access_token));
@@ -39,7 +38,6 @@ function LoginPage() {
           role: role
         };
         dispatch(setUserInfo(userInfo));
-        
         console.log('登录成功:', { token: access_token, username: res.username, role });
         message.success(`欢迎回来，${res.username}！`);
         

@@ -92,6 +92,9 @@ const adminMenuList = [
     },
 ];
 
+// 导出
+export { userMenuList, reviewerMenuList, adminMenuList };
+
 export const useMenu = () => {
     const dispatch = useDispatch();
     const { userRole, menuList } = useSelector((state: RootState) => state.authSlice);

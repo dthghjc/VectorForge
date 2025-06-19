@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import Token
-from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin, UserAdminUpdate
+from app.schemas.user import UserCreate, UserResponse, UserRegister, UserLogin, UserAdminUpdate, MenuItemResponse
 from app.crud.user import user_crud
 from app.core.exceptions import APIExceptions
 from app.models.user import UserRole
@@ -233,3 +233,61 @@ async def admin_update_user(
         raise APIExceptions.user_not_found()
     
     return updated_user
+
+@router.get("/menu", response_model=List[MenuItemResponse])
+async def get_menu(current_user: User = Depends(get_current_user)) -> List[MenuItemResponse]:
+    """
+    根据用户角色获取菜单列表
+    """
+    # 普通用户菜单
+    user_menu = [
+        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
+    ]
+    
+    # 审核员菜单（包含用户菜单）
+    reviewer_menu = [
+        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
+        MenuItemResponse(key='3', label='数据标注', icon='ContainerOutlined'),
+    ]
+    
+    # 管理员菜单
+    admin_menu = [
+        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
+        MenuItemResponse(key='3', label='内容管理', icon='ContainerOutlined'),
+        MenuItemResponse(
+            key='sub1',
+            label='一级菜单',
+            icon='MailOutlined',
+            children=[
+                MenuItemResponse(key='5', label='子项一'),
+                MenuItemResponse(key='6', label='子项二'),
+            ]
+        ),
+        MenuItemResponse(
+            key='sub2',
+            label='设置',
+            icon='AppstoreOutlined',
+            children=[
+                MenuItemResponse(key='9', label='系统设置'),
+                MenuItemResponse(
+                    key='sub3',
+                    label='更多',
+                    children=[
+                        MenuItemResponse(key='11', label='选项 A'),
+                        MenuItemResponse(key='12', label='选项 B'),
+                    ]
+                ),
+            ]
+        ),
+    ]
+    
+    # 根据用户角色返回相应的菜单
+    if current_user.role == UserRole.ADMIN:
+        return admin_menu
+    elif current_user.can_review:  # 审核员
+        return reviewer_menu
+    else:  # 普通用户
+        return user_menu

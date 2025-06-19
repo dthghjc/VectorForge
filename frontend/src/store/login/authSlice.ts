@@ -10,14 +10,23 @@ interface AuthState {
     isAuthenticated: boolean;
 }
 
-// 初始状态
-const initialState: AuthState = {
-    token: sessionStorage.getItem("token") || null,
-    username: sessionStorage.getItem("username") || null,
-    userRole: sessionStorage.getItem("userRole") || null,
-    menuList: [],
-    isAuthenticated: !!sessionStorage.getItem("token"),
+// 从sessionStorage获取初始状态的辅助函数
+const getInitialStateFromStorage = (): AuthState => {
+    const token = sessionStorage.getItem("token");
+    const username = sessionStorage.getItem("username");
+    const userRole = sessionStorage.getItem("userRole");
+    
+    return {
+        token: token || null,
+        username: username || null,
+        userRole: userRole || null,
+        menuList: [],
+        isAuthenticated: !!token,
+    };
 };
+
+// 初始状态
+const initialState: AuthState = getInitialStateFromStorage();
 
 // 创建认证相关的 slice
 export const authSlice = createSlice({
@@ -25,6 +34,11 @@ export const authSlice = createSlice({
     initialState,
     // 定义 reducers
     reducers: {
+        // 新增：强制从sessionStorage恢复状态
+        restoreFromStorage: (state) => {
+            const storedState = getInitialStateFromStorage();
+            Object.assign(state, storedState);
+        },
         setToken: (state, action: PayloadAction<string>) => {
             state.token = action.payload;
             state.isAuthenticated = true;
@@ -63,5 +77,14 @@ export const authSlice = createSlice({
     },
 });
 
-export const { setToken, clearToken, setUserInfo, clearUserInfo, setMenuList, clearAuth } = authSlice.actions;
+export const { 
+    restoreFromStorage, 
+    setToken, 
+    clearToken, 
+    setUserInfo, 
+    clearUserInfo, 
+    setMenuList, 
+    clearAuth 
+} = authSlice.actions;
+
 export default authSlice.reducer;

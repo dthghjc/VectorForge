@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
 
@@ -104,4 +104,18 @@ class User(UserInDBBase):
 
 class UserInDB(UserInDBBase):
     hashed_password: str
+
+# === 菜单相关 ===
+class MenuItemResponse(BaseModel):
+    """菜单项响应模型"""
+    key: str
+    label: str
+    icon: Optional[str] = None
+    children: Optional[List['MenuItemResponse']] = None
+
+    class Config:
+        from_attributes = True
+
+# 支持递归类型
+MenuItemResponse.model_rebuild()
     

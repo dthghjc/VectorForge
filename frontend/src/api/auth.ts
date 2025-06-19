@@ -59,3 +59,16 @@ export interface RegisterData {
 export async function register(data: RegisterData): Promise<UserInfo> {
     return http.post<any, UserInfo>('/api/v1/auth/register', data);
 }
+
+// 菜单项类型
+export interface MenuItem {
+    key: string;
+    label: string;
+    icon?: string;
+    children?: MenuItem[];
+}
+
+// 获取用户菜单API函数
+export async function getUserMenu(): Promise<MenuItem[]> {
+    return http.get<any, MenuItem[]>('/api/v1/auth/menu');
+}
