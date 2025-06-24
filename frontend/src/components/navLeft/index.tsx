@@ -1,63 +1,102 @@
-import { Menu } from 'antd';
-import { useState, useEffect } from 'react';
-import logo from "../../assets/logo.png"
-import icons from './iconList';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../store';
-import "./index.scss"
+import React, { useState } from 'react';
+import {
+  DesktopOutlined,
+  FileOutlined,
+  PieChartOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import { Layout, Menu, theme } from 'antd';
 
-interface MenuItem {
-    key: string;
-    label: string;
-    icon?: React.ReactNode;
-    children?: MenuItem[]
+const { Sider } = Layout;
+
+type MenuItem = Required<MenuProps>['items'][number];
+
+function getItem(
+  label: React.ReactNode,
+  key: React.Key,
+  icon?: React.ReactNode,
+  children?: MenuItem[],
+): MenuItem {
+  return {
+    key,
+    icon,
+    children,
+    label,
+  } as MenuItem;
 }
 
-function NavLeft() {
-    const navigate = useNavigate();
-    const menuList = useSelector((state: RootState) => state.authSlice.menuList);
-    const [menuData, setMenuData] = useState<MenuItem[]>([]);
-    const location = useLocation();
+const items: MenuItem[] = [
+  getItem('Option 1', '1', <PieChartOutlined />),
+  getItem('Option 2', '2', <DesktopOutlined />),
+  getItem('User', 'sub1', <UserOutlined />, [
+    getItem('Tom', '3'),
+    getItem('Bill', '4'),
+    getItem('Alex', '5'),
+  ]),
+  getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
+  getItem('Files', '9', <FileOutlined />),
+];
 
-    useEffect(() => {
-        configMenu()
-    }, [menuList]);
 
-    function configMenu() {
-        // 处理菜单数据，将icon字符串转换为实际的React组件
-        const processedMenu = menuList.map((item: any) => ({
-            ...item,
-            icon: item.icon ? icons[item.icon] : undefined,
-            children: item.children?.map((child: any) => ({
-                ...child,
-                icon: child.icon ? icons[child.icon] : undefined
-            }))
-        }));
-        
-        setMenuData(processedMenu);
-    }
 
-    const handleMenuClick = (e: any) => {
-        // 处理菜单点击事件
-        console.log('菜单点击:', e.key);
-        // 可以根据key来导航到对应页面
-        // navigate(`/${e.key}`);
-    };
-
-    return (
-        <div className="nav-left">
-            <div className="logo">
-                <img src={logo} alt="logo" />
-            </div>
-            <Menu
-                mode="inline"
-                selectedKeys={[location.pathname.slice(1) || 'home']}
-                items={menuData}
-                onClick={handleMenuClick}
-            />
+const NavLeft: React.FC = () => {
+  //侧边栏折叠
+  const [collapsed, setCollapsed] = useState(true);
+  //主题色
+  // 使用 Ant Design 主题系统获取当前主题的样式令牌
+  // colorBgContainer: 背景容器颜色，用于设置侧边栏背景
+  // borderRadiusLG: 大尺寸圆角半径，用于设置侧边栏圆角
+  const {
+    token: { colorBgContainer, borderRadiusLG },
+  } = theme.useToken();
+  
+  return (
+    <div
+        style={{
+            background: colorBgContainer,
+            borderRadius: borderRadiusLG,
+        }}
+    >
+      <Sider
+        theme="light"
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(value) => setCollapsed(value)}
+      >
+        <div 
+          style={{
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: collapsed ? '18px' : '14px',
+            fontWeight: 'bold',
+            color: '#1890ff',
+            background: '#fafafa',
+            margin: '16px 12px 16px 12px',
+            borderRadius: '8px',
+            border: '1px solid #e8e8e8',
+            transition: 'all 0.3s ease',
+            letterSpacing: collapsed ? '0' : '1px',
+          }}
+        >
+          {collapsed ? '🤓' : '🤓'}
         </div>
-    );
-}
+        <Menu
+          theme="light"
+          defaultSelectedKeys={['1']}
+          mode="inline"
+          items={items}
+          style={{
+            border: 'none',
+            marginTop: '0px',
+          }}
+        />
+      </Sider>
+    </div>
+  );
+};
 
 export default NavLeft;

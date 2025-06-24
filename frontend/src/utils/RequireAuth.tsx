@@ -21,7 +21,7 @@ function RequireAuth({ allowed, redirectTo, children }: Iprops) {
         if (allowed !== isLogin) {
             navigate(redirectTo);
         }
-    }, [allowed, isLogin, redirectTo, navigate]);
+    }, [allowed, isLogin, redirectTo]);
 
     return allowed === isLogin ? <>{children}</> : null;
 }
