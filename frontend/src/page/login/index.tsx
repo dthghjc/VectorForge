@@ -1,50 +1,41 @@
-import { Form, Input, Button, Card, Typography, Checkbox, App } from 'antd';
+import { Form, Input, Button, Card, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
-import { login, type LoginData, type SimpleUserInfo } from '../../api/auth';
+import { login } from '../../api/auth';
 import './index.scss';
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from "react-redux";
-import { setToken, setUserInfo } from "../../store/login/authSlice";
-import type { AppDispatch, RootState } from "../../store";
+import { useState } from 'react';
+import { useDispatch } from "react-redux";
+import { setToken, setUsername } from "../../store/login/authSlice";
 import { getLoginErrorMessage } from "../../utils/errorHandler";
 const { Title, Text } = Typography;
 const { useApp } = App;
 
-function LoginPage() {
+function Login() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState<boolean>(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(false);
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-  const { username, isAuthenticated } = useSelector((state: RootState) => state.authSlice);
+  const dispatch = useDispatch();
   const { message } = useApp();
 
-  function handleLogin(): void {
-    form.validateFields().then(async (res: LoginData) => {
+  function handleLogin(){
+    form.validateFields().then(async (res) => {
       setLoading(true);
       
       try {
-        // 1. 调用登录API获取token和角色信息
-        const tokenResponse = await login(res);
-        const { access_token, role } = tokenResponse;
+        // 1. 调用登录API获取token
+        const response = await login(res);
+        const { access_token } = response;
         
-        // 2. 存储token到Redux（会自动同步到sessionStorage）
+        // 2. 存储token到Redux
         dispatch(setToken(access_token));
         
-        // 3. 存储用户信息到Redux（会自动同步到sessionStorage）
-        const userInfo: SimpleUserInfo = {
-          username: res.username,
-          role: role
-        };
-        dispatch(setUserInfo(userInfo));
-        console.log('登录成功:', { token: access_token, username: res.username, role });
+        // 3. 存储用户信息到Redux
+        dispatch(setUsername(res.username));
+
         message.success(`欢迎回来，${res.username}！`);
-        
-        // 跳转将由 useEffect 监听状态变化自动处理
-        
+        navigate("/", { replace: true });
       } catch (err: any) {
-        console.error('Login error:', err);
+        console.log("login-err", err);
         const errorMsg = getLoginErrorMessage(err);
         message.error(errorMsg);
       } finally {
@@ -52,25 +43,10 @@ function LoginPage() {
       }
     }).catch((err: any) => {
       setLoading(false);
-      console.log(err);
+      console.log("login-err", err);
       message.error('表单验证失败，请检查输入');
     });
   }
-
-  // 检查用户是否已经登录，如果已登录则跳转到首页
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
-  // 监听登录状态变化，自动跳转
-  useEffect(() => {
-    if (isAuthenticated && username) {
-      console.log('登录状态已更新，准备跳转到首页');
-      navigate("/", { replace: true });
-    }
-  }, [isAuthenticated, username, navigate]);
 
   return (
     <div className="login-page">
@@ -133,12 +109,6 @@ function LoginPage() {
 
             <Form.Item className="login-options">
               <div className="form-options">
-                <Checkbox 
-                  checked={rememberMe} 
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                >
-                  记住我
-                </Checkbox>
                 <Link to="/forgot-password" className="forgot-link">
                   忘记密码？
                 </Link>
@@ -175,4 +145,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default Login;

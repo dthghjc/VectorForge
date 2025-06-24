@@ -13,9 +13,8 @@ import { Menu, Avatar, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import type { RootState } from '../../store';
 import { clearAuth } from '../../store/login/authSlice';
-import { useMenu } from '../../hooks/useMenu';
+
 
 
 const menuItems: Required<MenuProps>['items'] = [
@@ -53,7 +52,7 @@ const FancySideMenu: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { username } = useSelector((state: RootState) => state.authSlice);
+  const { username } = useSelector((state: any) => state.authSlice);
 
   // 处理用户菜单点击
   const handleUserMenuClick = (e: any) => {

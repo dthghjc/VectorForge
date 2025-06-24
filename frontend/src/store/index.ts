@@ -1,16 +1,9 @@
-import { configureStore } from "@reduxjs/toolkit";
-import authSlice from "./login/authSlice";
-import userSlice from "./user/userSlice";
-import contractSlice from "./finance/contractSlice";
+import { configureStore } from '@reduxjs/toolkit';
+import authSlice from './login/authSlice';
+
 
 export const store = configureStore({
-    reducer: {
-        authSlice,
-        userSlice,
-        contractSlice
-    }
+  reducer: {
+    authSlice
+  },
 });
-
-// TypeScript 类型定义
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;

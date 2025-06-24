@@ -1,58 +1,40 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import { routers as routes } from "./router";
+import { routers } from "./router";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect, useState } from "react";
-import { useMenu } from "./hooks/useMenu";
-import { generateRoutes } from "./utils/generatesRoutes";
-import type { RootState } from "./store";
-import { restoreFromStorage } from "./store/login/authSlice";
+import { getUserMenu } from "./api/auth";
+import { setMenuList } from "./store/login/authSlice";
+import { Spin } from "antd";
+
 
 function App() {
-  const { token, userRole, username, isAuthenticated } = useSelector((state: RootState) => state.authSlice);
-  const { menuList } = useMenu();
-  const [router, setRouter] = useState(createBrowserRouter(routes));
+  const { token } = useSelector((state: any) => state.authSlice);
   const dispatch = useDispatch();
-
-  // 应用启动时强制恢复状态
-  useEffect(() => {
-    console.log('🚀 App 组件启动，开始恢复状态...');
-    
-    // 强制从sessionStorage恢复状态
-    dispatch(restoreFromStorage());
-    
-    console.log('✅ 状态恢复完成');
-  }, [dispatch]); // 只在组件挂载时执行一次
+  const [routes,setRoutes] = useState<any[]>([]);
   
-  // 监听状态变化并更新路由
-  useEffect(() => {
-    console.log('📊 当前状态:', {
-      token: token ? '存在' : '不存在',
-      userRole,
-      username,
-      isAuthenticated,
-      menuListLength: menuList.length
-    });
+  useEffect(()=>{
+    async function loadData(){
+      const {data} = await getUserMenu();
+      
+      if (data.length){
+        dispatch(setMenuList(data));
+        // 生成动态路由
 
-    if (isAuthenticated && menuList.length > 0) {
-      console.log('🔧 生成动态路由...');
-      const dynamicRoutes = generateRoutes(menuList);
-      const myRoutes = [...routes];
-      myRoutes[0].children = dynamicRoutes;
-      myRoutes[0].children[0].index = true;
-      const newRouter = createBrowserRouter(myRoutes);
-      setRouter(newRouter);
-    } else {
-      console.log('🔧 使用默认路由...');
-      const newRouter = createBrowserRouter(routes);
-      setRouter(newRouter);
+      }
+
     }
-  }, [token, userRole, username, isAuthenticated, menuList]);
+    loadData()
+  },[token])
 
-  return (
-    <>
-      <RouterProvider router={router} />
-    </>
-  );
+
+  if (routers){
+    return (
+    <RouterProvider router={createBrowserRouter(routers)} />
+    );
+  }else{
+    return <Spin></Spin>
+  }
+
 }
 
 export default App;
