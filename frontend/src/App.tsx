@@ -14,16 +14,24 @@ function App() {
   
   useEffect(()=>{
     async function loadData(){
-      const {data} = await getUserMenu();
-      
-      if (data.length){
-        dispatch(setMenuList(data));
-        // 生成动态路由
+      try {
+        // 现在menu接口直接返回数组，不需要解构data
+        const menuData = await getUserMenu();
+        if (menuData && menuData.length){
+          console.log("menu-data:",menuData);
+          dispatch(setMenuList(menuData));
+          // 生成动态路由
 
+        }
+      } catch (error) {
+        console.error("获取菜单失败:", error);
       }
-
     }
-    loadData()
+    
+    // 只有当token存在时才获取菜单
+    if (token) {
+      loadData()
+    }
   },[token])
 
 

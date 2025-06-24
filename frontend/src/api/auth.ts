@@ -10,6 +10,14 @@ interface LoginResponse {
     access_token: string;
     token_type: string;
 }
+
+// 菜单项类型
+interface MenuItemResponse {
+    key: string;
+    label: string;
+    icon?: string;
+    children?: MenuItemResponse[];
+}
     
 export function login(data:LoginData): Promise<LoginResponse> {
     // 后端使用OAuth2PasswordRequestForm，需要使用FormData格式
@@ -20,6 +28,6 @@ export function login(data:LoginData): Promise<LoginResponse> {
     return post("/api/v1/auth/token", formData) as unknown as Promise<LoginResponse>
 }
 
-export function getUserMenu(){
-    return get("/api/v1/auth/menu")
+export function getUserMenu(): Promise<MenuItemResponse[]> {
+    return get("/api/v1/auth/menu") as unknown as Promise<MenuItemResponse[]>
 }
