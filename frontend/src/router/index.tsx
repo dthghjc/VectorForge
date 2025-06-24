@@ -3,6 +3,7 @@ import Home from "../page/home/index";
 import Login from "../page/login/index";
 import NotFound from "../page/404/index";
 import RequireAuth from "../utils/RequireAuth";
+import NewHome from "../page/newHome/index";
 
 export const routers: RouteObject[] = [
     {
@@ -16,5 +17,9 @@ export const routers: RouteObject[] = [
     {
         path: "*",
         element: <NotFound />
+    },
+    {
+        path: "/newHome",
+        element: <NewHome />
     }
 ]

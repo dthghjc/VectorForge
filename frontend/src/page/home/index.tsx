@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, theme } from 'antd';
 import NavLeft from '../../components/navLeft';
-import MyHeader from '../../components/header';
 
 const { Content } = Layout;
 const Home: React.FC = () => {
@@ -16,9 +15,6 @@ const Home: React.FC = () => {
         <NavLeft />
         
         <Layout>
-            {/* 头部 */}
-            <MyHeader />
-
             {/* 内容 */}
             <Content style={{ margin: '16px 16px 16px' }}>
                 <div style={{
