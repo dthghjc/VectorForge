@@ -1,8 +1,8 @@
 // Home.tsx
 import React from 'react';
 import { Layout, theme } from 'antd';
-import NavLeft from '../../components/NavLeft';
-import HeaderBar from '../../components/HeaderBar';
+import NavLeft from '../../components/navLeft';
+import HeaderBar from '../../components/header';
 
 const { Content } = Layout;
 
