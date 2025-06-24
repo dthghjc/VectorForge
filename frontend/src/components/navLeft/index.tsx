@@ -1,126 +1,112 @@
 import React, { useState } from 'react';
 import {
+  AppstoreOutlined,
+  ContainerOutlined,
   DesktopOutlined,
-  FileOutlined,
+  MailOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   PieChartOutlined,
-  TeamOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme } from 'antd';
+import { Button, Menu, Layout } from 'antd';
 
-// 从 Layout 组件中解构出 Sider 侧边栏组件
-const { Sider } = Layout;
-
-// 定义菜单项类型，继承自 Ant Design 的 MenuProps 类型
 type MenuItem = Required<MenuProps>['items'][number];
 
-/**
- * 创建菜单项的工具函数
- * @param label - 菜单项显示的文本标签
- * @param key - 菜单项的唯一标识键
- * @param icon - 菜单项的图标组件（可选）
- * @param children - 子菜单项数组（可选）
- * @returns 符合 MenuItem 类型的菜单项对象
- */
-function getItem(
-  label: React.ReactNode,
-  key: React.Key,
-  icon?: React.ReactNode,
-  children?: MenuItem[],
-): MenuItem {
-  return {
-    key,
-    icon,
-    children,
-    label,
-  } as MenuItem;
-}
 
-// 定义侧边栏菜单项配置
-// 包含主菜单项和子菜单项，每个菜单项都有对应的图标和路由键
 const items: MenuItem[] = [
-  getItem('Option 1', '1', <PieChartOutlined />),
-  getItem('Option 2', '2', <DesktopOutlined />),
-  // 用户管理菜单组，包含子菜单
-  getItem('User', 'sub1', <UserOutlined />, [
-    getItem('Tom', '3'),
-    getItem('Bill', '4'),
-    getItem('Alex', '5'),
-  ]),
-  // 团队管理菜单组，包含子菜单
-  getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
-  getItem('Files', '9', <FileOutlined />),
+  { key: '1', icon: <PieChartOutlined />, label: 'Option 1' },
+  { key: '2', icon: <DesktopOutlined />, label: 'Option 2' },
+  { key: '3', icon: <ContainerOutlined />, label: 'Option 3' },
+  {
+    key: 'sub1',
+    label: 'Navigation One',
+    icon: <MailOutlined />,
+    children: [
+      { key: '5', label: 'Option 5' },
+      { key: '6', label: 'Option 6' },
+      { key: '7', label: 'Option 7' },
+      { key: '8', label: 'Option 8' },
+    ],
+  },
+  {
+    key: 'sub2',
+    label: 'Navigation Two',
+    icon: <AppstoreOutlined />,
+    children: [
+      { key: '9', label: 'Option 9' },
+      { key: '10', label: 'Option 10' },
+      {
+        key: 'sub3',
+        label: 'Submenu',
+        children: [
+          { key: '11', label: 'Option 11' },
+          { key: '12', label: 'Option 12' },
+        ],
+      },
+    ],
+  },
 ];
 
-/**
- * 左侧导航栏组件
- * 提供可折叠的侧边栏导航功能，包含品牌标识和菜单列表
- */
-const NavLeft: React.FC = () => {
-  // 侧边栏折叠状态管理
-  // collapsed: 控制侧边栏是否处于折叠状态
-  // setCollapsed: 更新折叠状态的函数
-  const [collapsed, setCollapsed] = useState(true);
-  
-  // 使用 Ant Design 主题系统获取当前主题的样式令牌
-  // colorBgContainer: 背景容器颜色，用于设置侧边栏背景
-  // borderRadiusLG: 大尺寸圆角半径，用于设置侧边栏圆角
-  const {
-    token: { colorBgContainer, borderRadiusLG },
-  } = theme.useToken();
-  
+const { Sider } = Layout;
+
+const App: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(true); // 折叠状态
+  const [hoverLogo, setHoverLogo] = useState(false); // 鼠标是否悬停在 logo 区域
+
   return (
-    // 外层容器，应用主题背景色和圆角样式
-    <div
-        style={{
-            background: colorBgContainer,
-            borderRadius: borderRadiusLG,
-        }}
-    >
-      {/* Ant Design 侧边栏组件 */}
+    <Layout style={{ height: '100vh' }}>
       <Sider
-        theme="light" // 使用浅色主题
-        collapsible // 启用折叠功能
-        collapsed={collapsed} // 绑定折叠状态
-        onCollapse={(value) => setCollapsed(value)} // 折叠状态变化回调
+        collapsed={collapsed}  // 折叠状态
+        collapsible={false}  //不显示默认的折叠按钮
+        width={256}  // 宽度
+        collapsedWidth={80}  // 折叠宽度
+        style={{
+            transition: 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)',
+            background: '#fff',
+            borderRight: '1px solid #e0e0e0', // 👈 分割线
+            overflow: 'hidden'  //隐藏溢出到容器之外的内容
+        }}  // 样式
       >
-        {/* 品牌标识区域 */}
-        <div 
-          style={{
-            height: '40px', // 固定高度
-            display: 'flex', // 弹性布局
-            alignItems: 'center', // 垂直居中对齐
-            justifyContent: 'center', // 水平居中对齐
-            fontSize: collapsed ? '18px' : '14px', // 根据折叠状态调整字体大小
-            fontWeight: 'bold', // 粗体字重
-            color: '#1890ff', // 主题蓝色
-            background: '#fafafa', // 浅灰色背景
-            margin: '16px 12px 16px 12px', // 外边距
-            borderRadius: '8px', // 圆角
-            border: '1px solid #e8e8e8', // 边框
-            transition: 'all 0.3s ease', // 过渡动画
-            letterSpacing: collapsed ? '0' : '1px', // 根据折叠状态调整字间距
-          }}
-        >
-          {/* 品牌图标，目前使用相同的表情符号 */}
-          {collapsed ? '🤓' : '🤓'}
+        {/* 折叠按钮 */}
+        <div
+            style={{
+                height: 48,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'space-between', // 👈 展开时左右分布
+                padding: '0 16px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={() => setHoverLogo(true)}
+            onMouseLeave={() => setHoverLogo(false)}
+            onClick={() => setCollapsed(!collapsed)}
+            >
+                {collapsed ? (
+                hoverLogo ? (
+                <MenuUnfoldOutlined />
+                ) : (
+                <span style={{ fontSize: 20 }}>🤓</span>
+                )
+            ) : (
+                <>
+                <span style={{ fontSize: 20 }}>🤓</span>
+                <MenuFoldOutlined />
+                </>
+            )}
         </div>
-        
-        {/* 导航菜单组件 */}
         <Menu
-          theme="light" // 浅色主题
-          defaultSelectedKeys={['1']} // 默认选中的菜单项
-          mode="inline" // 内联模式，适合侧边栏
-          items={items} // 菜单项配置
-          style={{
-            border: 'none', // 移除边框
-            marginTop: '0px', // 移除顶部边距
-          }}
+            defaultSelectedKeys={['1']}
+            defaultOpenKeys={['sub1']}
+            mode="inline"
+            theme="light"
+            inlineCollapsed={collapsed}
+            items={items}
         />
       </Sider>
-    </div>
+    </Layout>
   );
 };
 
-export default NavLeft;
+export default App;

@@ -1,33 +1,39 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout, theme } from 'antd';
 import NavLeft from '../../components/navLeft';
+import HeaderBar from '../../components/header'; // 你自定义的头部组件
 
 const { Content } = Layout;
+
 const Home: React.FC = () => {
-  //主题色
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-        {/* 侧边栏 */}
-        <NavLeft />
-        
-        <Layout>
-            {/* 内容 */}
-            <Content style={{ margin: '16px 16px 16px' }}>
-                <div style={{
-                        padding: 24,
-                        minHeight: 360,
-                        background: colorBgContainer,
-                        borderRadius: borderRadiusLG,
-                    }}
-                >
-                Bill is a cat.
-                </div>
-            </Content>
-        </Layout>
+      {/* 左侧菜单栏 */}
+      <NavLeft />
+
+      {/* 右侧主区域 */}
+      <Layout style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* 头部 */}
+        <HeaderBar />
+
+        {/* 内容 */}
+        <Content style={{ flex: 1, margin: 16, overflow: 'auto' }}>
+          <div
+            style={{
+              padding: 24,
+              minHeight: 360,
+              background: colorBgContainer,
+              borderRadius: borderRadiusLG,
+            }}
+          >
+            Bill is a cat.
+          </div>
+        </Content>
+      </Layout>
     </Layout>
   );
 };
