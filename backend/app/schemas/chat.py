@@ -58,7 +58,7 @@ class MessageAuditCreate(BaseModel):
 class MessageAuditResponse(BaseModel):
     id: str
     message_id: str
-    reviewer_id: str
+    annotator_id: str
     status: str
     comment: Optional[str]
     created_at: datetime

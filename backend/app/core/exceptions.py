@@ -71,11 +71,11 @@ class APIExceptions:
         )
 
     @staticmethod
-    def reviewer_required():
-        """需要审核员权限"""
+    def annotator_required():
+        """需要数据标记员权限"""
         return HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Reviewer permission required"
+            detail="Annotator permission required"
         )
 
     @staticmethod

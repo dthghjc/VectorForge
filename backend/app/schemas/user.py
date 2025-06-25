@@ -6,7 +6,7 @@ from enum import Enum
 class UserRole(str, Enum):
     """用户角色枚举"""
     USER = "user"
-    REVIEWER = "reviewer"
+    ANNOTATION = "annotation"
     ADMIN = "admin"
 
 # === 基础模型 ===
@@ -81,7 +81,7 @@ class MessageAuditCreate(BaseModel):
 class MessageAuditResponse(BaseModel):
     id: str
     message_id: str
-    reviewer_id: str
+    annotator_id: str
     status: str
     comment: Optional[str]
     created_at: datetime

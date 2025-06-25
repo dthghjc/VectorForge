@@ -109,10 +109,10 @@ class UserCRUD:
         return query.offset(skip).limit(limit).all()
     
     @staticmethod
-    def get_reviewers(db: Session) -> List[User]:
-        """获取所有审核员"""
+    def get_annotators(db: Session) -> List[User]:
+        """获取所有数据标记员"""
         return db.query(User).filter(
-            or_(User.role == UserRole.REVIEWER, User.role == UserRole.ADMIN)
+            or_(User.role == UserRole.ANNOTATION, User.role == UserRole.ADMIN)
         ).all()
     
     @staticmethod
@@ -176,11 +176,11 @@ class UserCRUD:
 class MessageAuditCRUD:
     
     @staticmethod
-    def create_audit(db: Session, message_id: str, reviewer_id: str, status: str, comment: Optional[str] = None) -> MessageAudit:
+    def create_audit(db: Session, message_id: str, annotator_id: str, status: str, comment: Optional[str] = None) -> MessageAudit:
         """创建审核记录"""
         audit = MessageAudit(
             message_id=message_id,
-            reviewer_id=reviewer_id,
+            annotator_id=annotator_id,
             status=status,
             comment=comment
         )
@@ -195,10 +195,10 @@ class MessageAuditCRUD:
         return db.query(MessageAudit).filter(MessageAudit.message_id == message_id).all()
     
     @staticmethod
-    def get_audits_by_reviewer(db: Session, reviewer_id: str, skip: int = 0, limit: int = 100) -> List[MessageAudit]:
-        """获取审核员的审核记录"""
+    def get_audits_by_annotator(db: Session, annotator_id: str, skip: int = 0, limit: int = 100) -> List[MessageAudit]:
+        """获取标记员的审核记录"""
         return db.query(MessageAudit).filter(
-            MessageAudit.reviewer_id == reviewer_id
+            MessageAudit.annotator_id == annotator_id
         ).offset(skip).limit(limit).all()
 
 # 创建实例

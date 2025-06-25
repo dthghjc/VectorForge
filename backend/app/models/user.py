@@ -8,7 +8,7 @@ import enum
 class UserRole(enum.Enum):
     """用户角色枚举"""
     USER = "user"           # 普通用户
-    REVIEWER = "reviewer"   # 审核员（可标注+审核）
+    ANNOTATION = "annotation"   # 数据标记员
     ADMIN = "admin"         # 管理员
 
 class User(Base, TimestampMixin):
@@ -37,7 +37,7 @@ class User(Base, TimestampMixin):
     # === 关系映射 ===
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     # 审核记录关系（作为审核员）
-    audit_records = relationship("MessageAudit", back_populates="reviewer", cascade="all, delete-orphan")
+    audit_records = relationship("MessageAudit", back_populates="annotator", cascade="all, delete-orphan")
     
     def __repr__(self):
         """返回用户的字符串表示
@@ -53,9 +53,9 @@ class User(Base, TimestampMixin):
         return self.role == UserRole.ADMIN
     
     @property
-    def can_review(self) -> bool:
-        """是否有审核权限"""
-        return self.role in [UserRole.REVIEWER, UserRole.ADMIN]
+    def can_annotate(self) -> bool:
+        """是否有数据标注权限"""
+        return self.role in [UserRole.ANNOTATION, UserRole.ADMIN]
     
     @property
     def approval_rate(self) -> float:
@@ -72,12 +72,12 @@ class MessageAudit(Base, TimestampMixin):
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     message_id = Column(String(36), ForeignKey('messages.id'), nullable=False)
-    reviewer_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    annotator_id = Column(String(36), ForeignKey('users.id'), nullable=False)
     
     # 审核结果
     status = Column(String(20), nullable=False, comment="pending/approved/rejected")
     comment = Column(Text, nullable=True, comment="审核意见")
     
     # 关系映射
-    reviewer = relationship("User", back_populates="audit_records")
+    annotator = relationship("User", back_populates="audit_records")
     message = relationship("Message", back_populates="audits")

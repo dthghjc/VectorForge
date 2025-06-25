@@ -28,6 +28,7 @@ import {
     MenuUnfoldOutlined,
     PieChartOutlined,
     UserOutlined,
+    IdcardOutlined,
   } from '@ant-design/icons';
 const icons:any = {
     MessageOutlined: <MessageOutlined/>,
@@ -58,7 +59,8 @@ const icons:any = {
     ReadOutlined:<ReadOutlined/>,
     CommentOutlined:<CommentOutlined/>,
     ThunderboltOutlined:<ThunderboltOutlined/>,
-    TeamOutlined:<TeamOutlined/>
+    TeamOutlined:<TeamOutlined/>,
+    IdcardOutlined:<IdcardOutlined/>
   };
 
   export default icons

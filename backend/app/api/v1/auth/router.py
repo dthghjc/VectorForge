@@ -156,18 +156,18 @@ async def test_token(current_user: User = Depends(get_current_user)):
 def require_role(required_role: str):
     """权限检查装饰器"""
     def decorator(current_user: User = Depends(get_current_user)):
-        if required_role == "reviewer" and not current_user.can_review:
-            raise HTTPException(status_code=403, detail="需要审核员权限")
+        if required_role == "annotator" and not current_user.can_annotate:
+            raise HTTPException(status_code=403, detail="需要数据标记员权限")
         elif required_role == "admin" and not current_user.is_superuser:
             raise HTTPException(status_code=403, detail="需要管理员权限")
         return current_user
     return decorator
 
 # 权限检查依赖
-def get_current_reviewer(current_user: User = Depends(get_current_user)) -> User:
-    """获取当前审核员用户"""
-    if not current_user.can_review:
-        raise APIExceptions.reviewer_required()
+def get_current_annotator(current_user: User = Depends(get_current_user)) -> User:
+    """获取当前数据标记员用户"""
+    if not current_user.can_annotate:
+        raise APIExceptions.annotator_required()
     return current_user
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
@@ -241,22 +241,23 @@ async def get_menu(current_user: User = Depends(get_current_user)) -> List[MenuI
     """
     # 普通用户菜单
     user_menu = [
-        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
+        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
     ]
     
-    # 审核员菜单（包含用户菜单）
-    reviewer_menu = [
-        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
+    # 数据标记员菜单
+    annotation_menu = [
+        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
         MenuItemResponse(key='3', label='数据标注', icon='ContainerOutlined'),
     ]
     
     # 管理员菜单
     admin_menu = [
-        MenuItemResponse(key='1', label='Chat', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='工作台', icon='DesktopOutlined'),
-        MenuItemResponse(key='3', label='内容管理', icon='ContainerOutlined'),
+        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
+        MenuItemResponse(key='3', label='数据标注审核', icon='ContainerOutlined'),
+        MenuItemResponse(key='4', label='用户管理', icon='IdcardOutlined'),
         MenuItemResponse(
             key='sub1',
             label='一级菜单',
@@ -287,7 +288,7 @@ async def get_menu(current_user: User = Depends(get_current_user)) -> List[MenuI
     # 根据用户角色返回相应的菜单
     if current_user.role == UserRole.ADMIN:
         return admin_menu
-    elif current_user.can_review:  # 审核员
-        return reviewer_menu
+    elif current_user.can_annotate:  # 数据标记员
+        return annotation_menu
     else:  # 普通用户
         return user_menu

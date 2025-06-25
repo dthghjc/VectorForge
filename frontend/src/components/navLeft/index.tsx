@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Menu, Layout } from 'antd';
 import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
 import icons from './iconList';
 import { useSelector } from 'react-redux';
 import { getUserMenu } from '../../api/auth';

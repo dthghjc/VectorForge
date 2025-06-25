@@ -8,7 +8,7 @@ from app.models.chat import Message
 from app.schemas.chat import MessageAuditCreate, MessageAuditResponse, MessageUpdate
 from app.schemas.user import UserBrief
 from app.crud.user import user_crud, audit_crud
-from app.api.v1.auth.router import get_current_reviewer, get_current_admin, get_current_user
+from app.api.v1.auth.router import get_current_annotator, get_current_admin, get_current_user
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ async def audit_message(
     message_id: str,
     audit_data: MessageAuditCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_reviewer)
+    current_user: User = Depends(get_current_annotator)
 ):
     """
     审核消息
@@ -31,7 +31,7 @@ async def audit_message(
     audit = audit_crud.create_audit(
         db=db,
         message_id=message_id,
-        reviewer_id=current_user.id,
+        annotator_id=current_user.id,
         status=audit_data.status,
         comment=audit_data.comment
     )
@@ -53,7 +53,7 @@ async def get_pending_messages(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_reviewer)
+    current_user: User = Depends(get_current_annotator)
 ):
     """
     获取待审核的消息列表
@@ -92,21 +92,21 @@ async def get_message_audits(
     audits = audit_crud.get_audits_by_message(db, message_id)
     return audits
 
-@router.get("/reviewers", response_model=List[UserBrief])
-async def get_reviewers(
+@router.get("/annotators", response_model=List[UserBrief])
+async def get_annotators(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
     """
-    获取所有审核员列表（管理员权限）
+    获取所有数据标记员列表（管理员权限）
     """
-    reviewers = user_crud.get_reviewers(db)
-    return reviewers
+    annotators = user_crud.get_annotators(db)
+    return annotators
 
 @router.get("/stats")
 async def get_audit_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_reviewer)
+    current_user: User = Depends(get_current_annotator)
 ):
     """
     获取审核统计信息
@@ -124,7 +124,7 @@ async def get_audit_stats(
     rejected_messages = db.query(Message).filter(Message.audit_status == "rejected").count()
     
     # 当前用户的审核统计
-    user_audits = audit_crud.get_audits_by_reviewer(db, current_user.id)
+    user_audits = audit_crud.get_audits_by_annotator(db, current_user.id)
     user_audit_count = len(user_audits)
     
     return {
@@ -141,7 +141,7 @@ async def get_audit_stats(
 async def flag_message(
     message_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_reviewer)
+    current_user: User = Depends(get_current_annotator)
 ):
     """
     标记消息（用于特殊关注）
@@ -166,5 +166,5 @@ async def get_my_audits(
     """
     获取当前用户的审核记录
     """
-    audits = audit_crud.get_audits_by_reviewer(db, current_user.id, skip, limit)
+    audits = audit_crud.get_audits_by_annotator(db, current_user.id, skip, limit)
     return audits 
