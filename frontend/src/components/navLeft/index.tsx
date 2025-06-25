@@ -3,9 +3,6 @@ import { Menu, Layout } from 'antd';
 import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import icons from './iconList';
 import { useSelector } from 'react-redux';
-import { getUserMenu } from '../../api/auth';
-import { setMenuList } from '../../store/login/authSlice';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 const { Sider } = Layout;
@@ -23,13 +20,12 @@ interface MenuItemFromData{
 }
 
 function NavLeft() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [collapsed, setCollapsed] = useState(true);
   const [hoverLogo, setHoverLogo] = useState(false);
 
-  const menuList = useSelector((state:any)=>state.authSlice);
+  const { menuList } = useSelector((state:any)=>state.authSlice);
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
 
   useEffect(()=>{
@@ -37,8 +33,8 @@ function NavLeft() {
   },[menuList]);
 
   async function configMenu(){
-    const response = await getUserMenu();
-    const mappedMenuItems:MenuItem[]=mapMenuItems(response);
+    //const response = await getUserMenu();
+    const mappedMenuItems:MenuItem[]=mapMenuItems(menuList);
     setMenuData(mappedMenuItems);
   }
   

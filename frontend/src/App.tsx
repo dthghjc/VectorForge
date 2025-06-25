@@ -1,7 +1,7 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { routers } from "./router";
 import { useSelector, useDispatch } from "react-redux";
-import { useEffect, useState } from "react";
+import { useEffect, useState,Suspense } from "react";
 import { getUserMenu } from "./api/auth";
 import { setMenuList } from "./store/login/authSlice";
 import { Spin } from "antd";
@@ -20,14 +20,12 @@ function App() {
         // 现在menu接口直接返回数组，不需要解构data
         const menuData = await getUserMenu();
         if (menuData && menuData.length){
+          dispatch(setMenuList(menuData));
           const routesGet = generateRoutes(menuData as any);
           const myRoutes = [...routers];
           myRoutes[0].children = routesGet;
           myRoutes[0].children[0].index = true;
           setRoutes(myRoutes);
-
-          dispatch(setMenuList(menuData));
-        
         }else{
           setRoutes(routers);
         }
@@ -35,14 +33,15 @@ function App() {
         console.error("获取菜单失败:", error);
       }
     }
-
     loadData()
   },[token])
 
 
   if (userRoutes){
     return (
-    <RouterProvider router={createBrowserRouter(userRoutes)} />
+      <Suspense fallback={<Spin />}>
+        <RouterProvider router={createBrowserRouter(userRoutes)} />
+      </Suspense>
     );
   }else{
     return <Spin></Spin>
