@@ -1,57 +1,67 @@
-import { Layout, Avatar, Dropdown } from 'antd';
 import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
-import { useSelector } from 'react-redux';
+import type { MenuProps } from 'antd';
+import { Layout, Dropdown, Avatar } from 'antd';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { clearAuth } from '../../store/login/authSlice';
 
-const { Header } = Layout;
+const {Header} = Layout;
 
 function HeaderBar() {
   const username = sessionStorage.getItem("username");
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  const onClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === '1') {
+        //navigate('/personal');
+    }else if (key === '2'){
+        dispatch(clearAuth());
+        sessionStorage.clear();
+        navigate('/login');
+    }
+  };
 
-  const menuItems = [
+  const items: MenuProps['items'] = [
     {
-      key: 'user',
-      icon: <UserOutlined />,
+      key: '1',
       label: <span style={{ color: '#999' }}>{username || '未登录'}</span>, // 灰色用户名
+      icon: <UserOutlined style={{ color: '#999' }} />,
     },
     {
-      key: 'logout',
-      icon: <LogoutOutlined />,
+      key: '2',
       label: '退出登录',
-      onClick: () => {
-        sessionStorage.clear();
-        window.location.href = '/login';
-      },
+      icon: <LogoutOutlined />,
     },
   ];
 
-  return (
-    <Header
-      style={{
-        height: 48,
-        lineHeight: '48px',
-        background: '#fff',
-        padding: '0 16px',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        flexShrink: 0,
-        borderBottom: '1px solid #f0f0f0',
-      }}
-    >
-      <Dropdown menu={{ items: menuItems }} placement="bottomRight">
-        <div
-          style={{
-            cursor: 'pointer',
+    return (
+        <Header
+        style={{
+            height: 48,
+            lineHeight: '48px',
+            background: '#fff',
+            padding: '0 16px',
             display: 'flex',
+            justifyContent: 'flex-end',
             alignItems: 'center',
-            gap: 8,
-          }}
+            flexShrink: 0,
+        }}
         >
-          <Avatar size="small" icon={<UserOutlined />} />
-        </div>
-      </Dropdown>
-    </Header>
-  );
+        <Dropdown menu={{ items: items, onClick }} placement="bottomRight">
+            <div
+            style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+            }}
+            >
+            <Avatar size="small" icon={<UserOutlined />} />
+            </div>
+        </Dropdown>
+        </Header>
+    );
 }
 
 export default HeaderBar;
