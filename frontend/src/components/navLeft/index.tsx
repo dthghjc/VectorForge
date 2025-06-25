@@ -4,6 +4,9 @@ import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import icons from './iconList';
 import { useSelector } from 'react-redux';
 import { getUserMenu } from '../../api/auth';
+import { setMenuList } from '../../store/login/authSlice';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 const { Sider } = Layout;
 interface MenuItem {
@@ -20,6 +23,9 @@ interface MenuItemFromData{
 }
 
 function NavLeft() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const [collapsed, setCollapsed] = useState(true);
   const [hoverLogo, setHoverLogo] = useState(false);
 
@@ -32,7 +38,6 @@ function NavLeft() {
 
   async function configMenu(){
     const response = await getUserMenu();
-    console.log(response);
     const mappedMenuItems:MenuItem[]=mapMenuItems(response);
     setMenuData(mappedMenuItems);
   }
@@ -44,6 +49,10 @@ function NavLeft() {
         icon:item.icon ? icons[item.icon] : undefined,
         children:item.children?mapMenuItems(item.children):null
     }))
+  }
+
+  function handleClick({key}:{key:string}){
+    navigate(key)
   }
 
   return (
@@ -93,6 +102,7 @@ function NavLeft() {
         theme="light"
         inlineCollapsed={collapsed}
         items={menuData}
+        onClick={handleClick}
       />
     </Sider>
   );

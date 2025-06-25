@@ -241,44 +241,43 @@ async def get_menu(current_user: User = Depends(get_current_user)) -> List[MenuI
     """
     # 普通用户菜单
     user_menu = [
-        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
+        MenuItemResponse(key='/chat', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='/vectorTools', label='向量工具', icon='DesktopOutlined'),
     ]
     
     # 数据标记员菜单
     annotation_menu = [
-        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
-        MenuItemResponse(key='3', label='数据标注', icon='ContainerOutlined'),
+        MenuItemResponse(key='/chat', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='/vectorTools', label='向量工具', icon='DesktopOutlined'),
+        MenuItemResponse(key='/annotation', label='数据标注', icon='ContainerOutlined'),
     ]
     
     # 管理员菜单
     admin_menu = [
-        MenuItemResponse(key='1', label='对话助手', icon='MessageOutlined'),
-        MenuItemResponse(key='2', label='向量工具', icon='DesktopOutlined'),
-        MenuItemResponse(key='3', label='数据标注审核', icon='ContainerOutlined'),
-        MenuItemResponse(key='4', label='用户管理', icon='IdcardOutlined'),
+        MenuItemResponse(key='/chat', label='对话助手', icon='MessageOutlined'),
+        MenuItemResponse(key='/vectorTools', label='向量工具', icon='DesktopOutlined'),
+        MenuItemResponse(key='/annotation', label='数据标注审核', icon='ContainerOutlined'),
+        MenuItemResponse(key='/userManagement', label='用户管理', icon='IdcardOutlined'),
         MenuItemResponse(
-            key='sub1',
+            key='/sub1',
             label='一级菜单',
             icon='MailOutlined',
             children=[
-                MenuItemResponse(key='5', label='子项一'),
-                MenuItemResponse(key='6', label='子项二'),
+                MenuItemResponse(key='/sub1/sub11', label='子项一'),
+                MenuItemResponse(key='/sub1/sub12', label='子项二'),
             ]
         ),
         MenuItemResponse(
-            key='sub2',
+            key='/sub2',
             label='设置',
             icon='AppstoreOutlined',
             children=[
-                MenuItemResponse(key='9', label='系统设置'),
                 MenuItemResponse(
-                    key='sub3',
+                    key='/sub2/sub21',
                     label='更多',
                     children=[
-                        MenuItemResponse(key='11', label='选项 A'),
-                        MenuItemResponse(key='12', label='选项 B'),
+                        MenuItemResponse(key='/sub2/sub21/sub211', label='选项 A'),
+                        MenuItemResponse(key='/sub2/sub21/sub212', label='选项 B'),
                     ]
                 ),
             ]

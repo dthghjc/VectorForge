@@ -1,6 +1,7 @@
 import { Layout, theme } from 'antd';
 import NavLeft from '../../components/navLeft';
 import HeaderBar from '../../components/header';
+import { Outlet } from 'react-router-dom';
 
 const { Content } = Layout;
 
@@ -26,7 +27,7 @@ function Home() {
               minHeight: '100%',
             }}
           >
-            Bill is a cat.
+            <Outlet />
           </div>
         </Content>
       </Layout>

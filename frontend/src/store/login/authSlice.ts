@@ -18,7 +18,6 @@ export const authSlice=createSlice({
         },
         setMenuList:(state,action:PayloadAction<any[]>)=>{
             state.menuList=action.payload
-            sessionStorage.setItem("menuList", JSON.stringify(action.payload))
         },
         clearAuth:(state)=>{
             state.token=null
@@ -26,7 +25,6 @@ export const authSlice=createSlice({
             state.menuList=[]
             sessionStorage.removeItem("token")
             sessionStorage.removeItem("username")
-            sessionStorage.removeItem("menuList")
         }
     }
 })

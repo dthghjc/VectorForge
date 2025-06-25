@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { getUserMenu } from "./api/auth";
 import { setMenuList } from "./store/login/authSlice";
 import { Spin } from "antd";
+import { generateRoutes } from "./utils/generatesRoutes";
+
 
 
 function App() {
   const { token } = useSelector((state: any) => state.authSlice);
   const dispatch = useDispatch();
-  const [routes,setRoutes] = useState<any[]>([]);
+  const [userRoutes,setRoutes] = useState<any>(null);//动态创建的路由表
   
   useEffect(()=>{
     async function loadData(){
@@ -18,31 +20,33 @@ function App() {
         // 现在menu接口直接返回数组，不需要解构data
         const menuData = await getUserMenu();
         if (menuData && menuData.length){
-          console.log("menu-data:",menuData);
-          dispatch(setMenuList(menuData));
-          // 生成动态路由
+          const routesGet = generateRoutes(menuData as any);
+          const myRoutes = [...routers];
+          myRoutes[0].children = routesGet;
+          myRoutes[0].children[0].index = true;
+          setRoutes(myRoutes);
 
+          dispatch(setMenuList(menuData));
+        
+        }else{
+          setRoutes(routers);
         }
       } catch (error) {
         console.error("获取菜单失败:", error);
       }
     }
-    
-    // 只有当token存在时才获取菜单
-    if (token) {
-      loadData()
-    }
+
+    loadData()
   },[token])
 
 
-  if (routers){
+  if (userRoutes){
     return (
-    <RouterProvider router={createBrowserRouter(routers)} />
+    <RouterProvider router={createBrowserRouter(userRoutes)} />
     );
   }else{
     return <Spin></Spin>
   }
-
 }
 
 export default App;
