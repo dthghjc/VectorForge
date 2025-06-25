@@ -1,57 +1,51 @@
-import { useState } from 'react';
-import {
-  AppstoreOutlined,
-  ContainerOutlined,
-  DesktopOutlined,
-  MailOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  PieChartOutlined,
-} from '@ant-design/icons';
+import { useState, useEffect } from 'react';
 import { Menu, Layout } from 'antd';
+import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import icons from './iconList';
+import { useSelector } from 'react-redux';
+import { getUserMenu } from '../../api/auth';
 
 const { Sider } = Layout;
-
-type MenuItem = Required<MenuProps>['items'][number];
-
-const items: MenuItem[] = [
-  { key: '1', icon: <PieChartOutlined />, label: 'Option 1' },
-  { key: '2', icon: <DesktopOutlined />, label: 'Option 2' },
-  { key: '3', icon: <ContainerOutlined />, label: 'Option 3' },
-  {
-    key: 'sub1',
-    label: 'Navigation One',
-    icon: <MailOutlined />,
-    children: [
-      { key: '5', label: 'Option 5' },
-      { key: '6', label: 'Option 6' },
-      { key: '7', label: 'Option 7' },
-      { key: '8', label: 'Option 8' },
-    ],
-  },
-  {
-    key: 'sub2',
-    label: 'Navigation Two',
-    icon: <AppstoreOutlined />,
-    children: [
-      { key: '9', label: 'Option 9' },
-      { key: '10', label: 'Option 10' },
-      {
-        key: 'sub3',
-        label: 'Submenu',
-        children: [
-          { key: '11', label: 'Option 11' },
-          { key: '12', label: 'Option 12' },
-        ],
-      },
-    ],
-  },
-];
+interface MenuItem {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  children?: MenuItem[];
+}
+interface MenuItemFromData{
+    key:string;
+    label:string;
+    icon?:string;
+    children?:MenuItemFromData[]
+}
 
 function NavLeft() {
   const [collapsed, setCollapsed] = useState(true);
   const [hoverLogo, setHoverLogo] = useState(false);
+
+  const menuList = useSelector((state:any)=>state.authSlice);
+  const [menuData, setMenuData] = useState<MenuItem[]>([]);
+
+  useEffect(()=>{
+    configMenu();
+  },[menuList]);
+
+  async function configMenu(){
+    const response = await getUserMenu();
+    console.log(response);
+    const mappedMenuItems:MenuItem[]=mapMenuItems(response);
+    setMenuData(mappedMenuItems);
+  }
+  
+  function mapMenuItems(items:MenuItemFromData[]):any{
+    return items.map((item:MenuItemFromData)=>({
+        key:item.key,
+        label:item.label,
+        icon:item.icon ? icons[item.icon] : undefined,
+        children:item.children?mapMenuItems(item.children):null
+    }))
+  }
 
   return (
     <Sider
@@ -99,7 +93,7 @@ function NavLeft() {
         mode="inline"
         theme="light"
         inlineCollapsed={collapsed}
-        items={items}
+        items={menuData}
       />
     </Sider>
   );

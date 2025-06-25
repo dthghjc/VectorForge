@@ -39,7 +39,6 @@ const icons:any = {
     MenuUnfoldOutlined: <MenuUnfoldOutlined/>,
     PieChartOutlined: <PieChartOutlined/>,
     UserOutlined: <UserOutlined/>,
-    // ----------------------
     DashboardOutlined: <DashboardOutlined />,
     UnorderedListOutlined: <UnorderedListOutlined />,
     UserAddOutlined: <UserAddOutlined />,
