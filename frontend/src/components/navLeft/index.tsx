@@ -8,7 +8,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { clearAuth } from '../../store/login/authSlice';
 import icons from './iconList';
 
@@ -32,6 +32,7 @@ interface MenuItemFromData {
 function NavLeft() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
   const username = sessionStorage.getItem('username') || '未登录';
 
   /* 折叠 / 悬浮 */
@@ -41,6 +42,17 @@ function NavLeft() {
   /* 菜单数据 */
   const { menuList } = useSelector((s: any) => s.authSlice);
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
+  
+  /* 获取当前选中的菜单项 */
+  const getSelectedKeys = () => {
+    const currentPath = location.pathname;
+    // 如果当前路径是根路径（/），且有菜单数据，选择第一个菜单项
+    if (currentPath === '/' && menuData.length > 0) {
+      return [menuData[0].key];
+    }
+    // 否则根据当前路径选择对应的菜单项
+    return [currentPath];
+  };
 
   /* 根据后端菜单映射图标 */
   useEffect(() => {
@@ -60,6 +72,13 @@ function NavLeft() {
   function handleClick({ key }: { key: string }) {
     navigate(key);
   }
+
+  /* 当路径为根路径时，自动跳转到第一个菜单项 */
+  useEffect(() => {
+    if (location.pathname === '/' && menuData.length > 0) {
+      navigate(menuData[0].key, { replace: true });
+    }
+  }, [location.pathname, menuData, navigate]);
 
   /* 头像下拉菜单 */
   const avatarMenu = [
@@ -141,7 +160,7 @@ function NavLeft() {
             theme="light"
             inlineCollapsed={collapsed}
             items={menuData}
-            defaultSelectedKeys={['/chat']}
+            selectedKeys={getSelectedKeys()}
             onClick={handleClick}
             style={{ 
               height: '100%',
