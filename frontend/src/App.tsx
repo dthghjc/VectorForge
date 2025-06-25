@@ -13,9 +13,13 @@ function App() {
   const { token } = useSelector((state: any) => state.authSlice);
   const dispatch = useDispatch();
   const [userRoutes,setRoutes] = useState<any>(null);//动态创建的路由表
-  
   useEffect(()=>{
     async function loadData(){
+      if (!token) {
+        setRoutes(routers); // 把基础路由写入 state
+        return;             // ← 直接结束 loadData，后面的代码不再执行
+      }
+      // ↓ 只有 token 存在时才会执行这里的代码
       try {
         // 现在menu接口直接返回数组，不需要解构data
         const menuData = await getUserMenu();
@@ -27,6 +31,7 @@ function App() {
           myRoutes[0].children[0].index = true;
           setRoutes(myRoutes);
         }else{
+          console.log('routers',routers)
           setRoutes(routers);
         }
       } catch (error) {
