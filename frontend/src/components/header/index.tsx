@@ -1,12 +1,18 @@
-// HeaderBar.tsx
-import React from 'react';
 import { Layout, Avatar, Dropdown } from 'antd';
 import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
 
 const { Header } = Layout;
 
-const HeaderBar: React.FC = () => {
+function HeaderBar() {
+  const username = sessionStorage.getItem("username");
+
   const menuItems = [
+    {
+      key: 'user',
+      icon: <UserOutlined />,
+      label: <span style={{ color: '#999' }}>{username || '未登录'}</span>, // 灰色用户名
+    },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
@@ -28,8 +34,8 @@ const HeaderBar: React.FC = () => {
         display: 'flex',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        borderBottom: '1px solid #f0f0f0',
         flexShrink: 0,
+        borderBottom: '1px solid #f0f0f0',
       }}
     >
       <Dropdown menu={{ items: menuItems }} placement="bottomRight">
@@ -42,11 +48,10 @@ const HeaderBar: React.FC = () => {
           }}
         >
           <Avatar size="small" icon={<UserOutlined />} />
-          <span style={{ fontWeight: 500 }}>用户名</span>
         </div>
       </Dropdown>
     </Header>
   );
-};
+}
 
 export default HeaderBar;

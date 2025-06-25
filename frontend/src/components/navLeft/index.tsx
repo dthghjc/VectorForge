@@ -1,5 +1,4 @@
-// NavLeft.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   AppstoreOutlined,
   ContainerOutlined,
@@ -13,6 +12,7 @@ import { Menu, Layout } from 'antd';
 import type { MenuProps } from 'antd';
 
 const { Sider } = Layout;
+
 type MenuItem = Required<MenuProps>['items'][number];
 
 const items: MenuItem[] = [
@@ -49,7 +49,7 @@ const items: MenuItem[] = [
   },
 ];
 
-const NavLeft: React.FC = () => {
+function NavLeft() {
   const [collapsed, setCollapsed] = useState(true);
   const [hoverLogo, setHoverLogo] = useState(false);
 
@@ -96,7 +96,6 @@ const NavLeft: React.FC = () => {
 
       <Menu
         defaultSelectedKeys={['1']}
-        defaultOpenKeys={['sub1']}
         mode="inline"
         theme="light"
         inlineCollapsed={collapsed}
@@ -104,6 +103,6 @@ const NavLeft: React.FC = () => {
       />
     </Sider>
   );
-};
+}
 
 export default NavLeft;

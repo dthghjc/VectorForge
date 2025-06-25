@@ -1,29 +1,28 @@
-// Home.tsx
-import React from 'react';
 import { Layout, theme } from 'antd';
 import NavLeft from '../../components/navLeft';
 import HeaderBar from '../../components/header';
 
 const { Content } = Layout;
 
-const Home: React.FC = () => {
+function Home() {
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { colorBgContainer },
   } = theme.useToken();
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
+      {/* 侧边栏 */}
       <NavLeft />
 
+      {/* 右侧区域（头部 + 内容） */}
       <Layout style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
         <HeaderBar />
 
-        <Content style={{ flex: 1, margin: 16, overflow: 'auto' }}>
+        <Content style={{ flex: 1, margin: 0, overflow: 'auto' }}>
           <div
             style={{
               padding: 24,
               background: colorBgContainer,
-              borderRadius: borderRadiusLG,
               minHeight: '100%',
             }}
           >
@@ -33,6 +32,6 @@ const Home: React.FC = () => {
       </Layout>
     </Layout>
   );
-};
+}
 
 export default Home;
