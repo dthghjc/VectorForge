@@ -30,15 +30,16 @@ import {
   useXChat,
 } from '@ant-design/x';
 import { Avatar, Button, Flex, type GetProp, Space, Spin, message } from 'antd';
-import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
+import './index.scss';
 
 type BubbleDataType = {
   role: string;
   content: string;
 };
 
+/* 左侧“最近会话”列表的初始数据 */
 const DEFAULT_CONVERSATIONS_ITEMS = [
   {
     key: 'default-0',
@@ -57,6 +58,7 @@ const DEFAULT_CONVERSATIONS_ITEMS = [
   },
 ];
 
+/* 右侧占位页里的两个 Prompts 面板（“Hot Topics”）的静态数据 */
 const HOT_TOPICS = {
   key: '1',
   label: 'Hot Topics',
@@ -89,6 +91,7 @@ const HOT_TOPICS = {
   ],
 };
 
+/* 右侧占位页里的两个 Prompts 面板（“Design Guide”）的静态数据 */
 const DESIGN_GUIDE = {
   key: '2',
   label: 'Design Guide',
@@ -120,6 +123,7 @@ const DESIGN_GUIDE = {
   ],
 };
 
+/* 输入框上方的快捷提示词按钮数据 */
 const SENDER_PROMPTS: GetProp<typeof Prompts, 'items'> = [
   {
     key: '1',
@@ -143,119 +147,9 @@ const SENDER_PROMPTS: GetProp<typeof Prompts, 'items'> = [
   },
 ];
 
-const useStyle = createStyles(({ token, css }) => {
-  return {
-    layout: css`
-      width: 100%;
-      min-width: 1000px;
-      height: 100vh;
-      display: flex;
-      background: ${token.colorBgContainer};
-      font-family: AlibabaPuHuiTi, ${token.fontFamily}, sans-serif;
-    `,
-    // sider 样式
-    sider: css`
-      background: ${token.colorBgLayout}80;
-      width: 280px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      padding: 0 12px;
-      box-sizing: border-box;
-    `,
-    logo: css`
-      display: flex;
-      align-items: center;
-      justify-content: start;
-      padding: 0 24px;
-      box-sizing: border-box;
-      gap: 8px;
-      margin: 24px 0;
 
-      span {
-        font-weight: bold;
-        color: ${token.colorText};
-        font-size: 16px;
-      }
-    `,
-    addBtn: css`
-      background: #1677ff0f;
-      border: 1px solid #1677ff34;
-      height: 40px;
-    `,
-    conversations: css`
-      flex: 1;
-      overflow-y: auto;
-      margin-top: 12px;
-      padding: 0;
-
-      .ant-conversations-list {
-        padding-inline-start: 0;
-      }
-    `,
-    siderFooter: css`
-      border-top: 1px solid ${token.colorBorderSecondary};
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    `,
-    // chat list 样式
-    chat: css`
-      height: 100%;
-      width: 100%;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      padding-block: ${token.paddingLG}px;
-      gap: 16px;
-    `,
-    chatPrompt: css`
-      .ant-prompts-label {
-        color: #000000e0 !important;
-      }
-      .ant-prompts-desc {
-        color: #000000a6 !important;
-        width: 100%;
-      }
-      .ant-prompts-icon {
-        color: #000000a6 !important;
-      }
-    `,
-    chatList: css`
-      flex: 1;
-      overflow: auto;
-    `,
-    loadingMessage: css`
-      background-image: linear-gradient(90deg, #ff6b23 0%, #af3cb8 31%, #53b6ff 89%);
-      background-size: 100% 2px;
-      background-repeat: no-repeat;
-      background-position: bottom;
-    `,
-    placeholder: css`
-      padding-top: 32px;
-    `,
-    // sender 样式
-    sender: css`
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-    `,
-    speechButton: css`
-      font-size: 18px;
-      color: ${token.colorText} !important;
-    `,
-    senderPrompt: css`
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-      color: ${token.colorText};
-    `,
-  };
-});
 
 const Independent: React.FC = () => {
-  const { styles } = useStyle();
   const abortController = useRef<AbortController>(null);
 
   // ==================== State ====================
@@ -349,9 +243,9 @@ const Independent: React.FC = () => {
 
   // ==================== Nodes ====================
   const chatSider = (
-    <div className={styles.sider}>
+    <div className="chat-sider">
       {/* 🌟 Logo */}
-      <div className={styles.logo}>
+      <div className="chat-logo">
         <img
           src="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*eco6RrQhxbMAAAAAAAAAAAAADgCCAQ/original"
           draggable={false}
@@ -378,7 +272,7 @@ const Independent: React.FC = () => {
           setMessages([]);
         }}
         type="link"
-        className={styles.addBtn}
+        className="chat-add-btn"
         icon={<PlusOutlined />}
       >
         New Conversation
@@ -387,7 +281,7 @@ const Independent: React.FC = () => {
       {/* 🌟 会话管理 */}
       <Conversations
         items={conversations}
-        className={styles.conversations}
+        className="chat-conversations"
         activeKey={curConversation}
         onActiveChange={async (val) => {
           abortController.current?.abort();
@@ -430,21 +324,21 @@ const Independent: React.FC = () => {
         })}
       />
 
-      <div className={styles.siderFooter}>
+      <div className="chat-sider-footer">
         <Avatar size={24} />
         <Button type="text" icon={<QuestionCircleOutlined />} />
       </div>
     </div>
   );
   const chatList = (
-    <div className={styles.chatList}>
+    <div className="chat-list">
       {messages?.length ? (
         /* 🌟 消息列表 */
         <Bubble.List
           items={messages?.map((i) => ({
             ...i.message,
             classNames: {
-              content: i.status === 'loading' ? styles.loadingMessage : '',
+              content: i.status === 'loading' ? 'loading-message' : '',
             },
             typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false,
           }))}
@@ -470,7 +364,7 @@ const Independent: React.FC = () => {
           direction="vertical"
           size={16}
           style={{ paddingInline: 'calc(calc(100% - 700px) /2)' }}
-          className={styles.placeholder}
+          className="chat-placeholder"
         >
           <Welcome
             variant="borderless"
@@ -500,7 +394,7 @@ const Independent: React.FC = () => {
               onItemClick={(info) => {
                 onSubmit(info.data.description as string);
               }}
-              className={styles.chatPrompt}
+              className="chat-prompt"
             />
 
             <Prompts
@@ -517,7 +411,7 @@ const Independent: React.FC = () => {
               onItemClick={(info) => {
                 onSubmit(info.data.description as string);
               }}
-              className={styles.chatPrompt}
+              className="chat-prompt"
             />
           </Flex>
         </Space>
@@ -558,7 +452,7 @@ const Independent: React.FC = () => {
         styles={{
           item: { padding: '6px 12px' },
         }}
-        className={styles.senderPrompt}
+        className="sender-prompt"
       />
       {/* 🌟 输入框 */}
       <Sender
@@ -580,13 +474,13 @@ const Independent: React.FC = () => {
           />
         }
         loading={loading}
-        className={styles.sender}
+        className="chat-sender"
         allowSpeech
         actions={(_, info) => {
           const { SendButton, LoadingButton, SpeechButton } = info.components;
           return (
             <Flex gap={4}>
-              <SpeechButton className={styles.speechButton} />
+              <SpeechButton className="speech-button" />
               {loading ? <LoadingButton type="default" /> : <SendButton type="primary" />}
             </Flex>
           );
@@ -608,10 +502,10 @@ const Independent: React.FC = () => {
 
   // ==================== Render =================
   return (
-    <div className={styles.layout}>
+    <div className="chat-layout">
       {chatSider}
 
-      <div className={styles.chat}>
+      <div className="chat-container">
         {chatList}
         {chatSender}
       </div>
