@@ -153,30 +153,37 @@ const Independent: React.FC = () => {
   const abortController = useRef<AbortController>(null);
 
   // ==================== State ====================
+  // 保存各回话的历史消息
   const [messageHistory, setMessageHistory] = useState<Record<string, any>>({});
 
+  // 会话列表（左栏）
   const [conversations, setConversations] = useState(DEFAULT_CONVERSATIONS_ITEMS);
-  const [curConversation, setCurConversation] = useState(DEFAULT_CONVERSATIONS_ITEMS[0].key);
 
+  // 当前激活会话 key，决定右侧显示哪段聊天记录
+  const [curConversation, setCurConversation] = useState(DEFAULT_CONVERSATIONS_ITEMS[0].key);
+  // 附件上传弹层开关 + 已选文件。由 Sender.Header 控制
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<GetProp<typeof Attachments, 'items'>>([]);
-
+  // 	文本框输入，	绑定 <Sender>
   const [inputValue, setInputValue] = useState('');
 
-  /**
-   * 🔔 Please replace the BASE_URL, PATH, MODEL, API_KEY with your own values.
-   */
-
   // ==================== Runtime ====================
+  // 创建 XAgent 实例，用于处理 AI 请求
+  // 配置 LLM 接口的封装，返回 agent。
   const [agent] = useXAgent<BubbleDataType>({
     baseURL: 'https://api.x.ant.design/api/llm_siliconflow_deepseekr1',
     model: 'deepseek-ai/DeepSeek-R1',
     dangerouslyApiKey: 'Bearer sk-xxxxxxxxxxxxxxxxxxxx',
   });
+
+  // 用于全局按钮状态
   const loading = agent.isRequesting();
 
+  // 创建 XChat 实例，用于处理聊天逻辑
+  // 绑定 agent，处理请求、消息流、消息转换等
   const { onRequest, messages, setMessages } = useXChat({
     agent,
+    // 接口报错或被 abort 时替代回复
     requestFallback: (_, { error }) => {
       if (error.name === 'AbortError') {
         return {
@@ -189,6 +196,7 @@ const Independent: React.FC = () => {
         role: 'assistant',
       };
     },
+    // 流式响应分块时如何拼接“思考 / 内容”
     transformMessage: (info) => {
       const { originMessage, chunk } = info || {};
       let currentContent = '';
@@ -221,6 +229,7 @@ const Independent: React.FC = () => {
         role: 'assistant',
       };
     },
+    // 把内部 AbortController 暴露给外部（点击“取消”用）。
     resolveAbortController: (controller) => {
       abortController.current = controller;
     },
@@ -242,6 +251,7 @@ const Independent: React.FC = () => {
   };
 
   // ==================== Nodes ====================
+  // 左侧栏
   const chatSider = (
     <div className="chat-sider">
       {/* 🌟 Logo */}
@@ -253,10 +263,10 @@ const Independent: React.FC = () => {
           width={24}
           height={24}
         />
-        <span>Ant Design X</span>
+        <span>Vector Forge</span>
       </div>
 
-      {/* 🌟 添加会话 */}
+      {/* 🌟 添加会话,向 conversations prepend 一个条目并切到新会话 */}
       <Button
         onClick={() => {
           const now = dayjs().valueOf().toString();
@@ -285,8 +295,8 @@ const Independent: React.FC = () => {
         activeKey={curConversation}
         onActiveChange={async (val) => {
           abortController.current?.abort();
-          // The abort execution will trigger an asynchronous requestFallback, which may lead to timing issues.
-          // In future versions, the sessionId capability will be added to resolve this problem.
+          // 取消请求时，会触发异步的 requestFallback，可能导致时间问题。
+          // 未来版本将添加 sessionId 能力来解决这个问题。
           setTimeout(() => {
             setCurConversation(val);
             setMessages(messageHistory?.[val] || []);
@@ -294,6 +304,7 @@ const Independent: React.FC = () => {
         }}
         groupable
         styles={{ item: { padding: '0 8px' } }}
+        // 每条会话右键菜单（Rename / Delete）
         menu={(conversation) => ({
           items: [
             {
@@ -310,8 +321,8 @@ const Independent: React.FC = () => {
                 const newList = conversations.filter((item) => item.key !== conversation.key);
                 const newKey = newList?.[0]?.key;
                 setConversations(newList);
-                // The delete operation modifies curConversation and triggers onActiveChange, so it needs to be executed with a delay to ensure it overrides correctly at the end.
-                // This feature will be fixed in a future version.
+                // 删除操作会修改 curConversation 并触发 onActiveChange，所以需要延迟执行以确保在最后正确覆盖。
+                // 这个功能将在未来版本中修复。
                 setTimeout(() => {
                   if (conversation.key === curConversation) {
                     setCurConversation(newKey);
@@ -323,13 +334,9 @@ const Independent: React.FC = () => {
           ],
         })}
       />
-
-      <div className="chat-sider-footer">
-        <Avatar size={24} />
-        <Button type="text" icon={<QuestionCircleOutlined />} />
-      </div>
     </div>
   );
+  // 中部聊天记录
   const chatList = (
     <div className="chat-list">
       {messages?.length ? (
@@ -369,7 +376,7 @@ const Independent: React.FC = () => {
           <Welcome
             variant="borderless"
             icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-            title="Hello, I'm Ant Design X"
+            title="Hello, I'm Vector Forge"
             description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
             extra={
               <Space>
