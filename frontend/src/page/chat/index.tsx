@@ -171,9 +171,9 @@ const Independent: React.FC = () => {
   // 创建 XAgent 实例，用于处理 AI 请求
   // 配置 LLM 接口的封装，返回 agent。
   const [agent] = useXAgent<BubbleDataType>({
-    baseURL: 'https://api.x.ant.design/api/llm_siliconflow_deepseekr1',
-    model: 'deepseek-ai/DeepSeek-R1',
-    dangerouslyApiKey: 'Bearer sk-xxxxxxxxxxxxxxxxxxxx',
+    baseURL: 'https://api.deepseek.com/chat/completions',
+    model: 'deepseek-chat',
+    dangerouslyApiKey: import.meta.env.VITE_DEEPSEEK_API_KEY,
   });
 
   // 用于全局按钮状态
