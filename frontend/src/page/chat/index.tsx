@@ -33,6 +33,7 @@ import { Avatar, Button, Flex, type GetProp, Space, Spin, message } from 'antd';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
+import { renderMarkdown } from '../../utils/renderMarkdown';
 
 type BubbleDataType = {
   role: string;
@@ -342,18 +343,20 @@ const Independent: React.FC = () => {
       {messages?.length ? (
         /* 🌟 消息列表 */
         <Bubble.List
-          items={messages?.map((i) => ({
+          items={messages?.map((i, index) => ({
             ...i.message,
+            key: i.id ?? index.toString(),  // 设置消息的唯一标识
             classNames: {
               content: i.status === 'loading' ? 'loading-message' : '',
             },
-            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false,
+            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false, // 设置消息的加载状态
           }))}
-          style={{ height: '100%', paddingInline: 'calc(calc(100% - 700px) /2)' }}
+          
+          
           roles={{
             assistant: {
-              placement: 'start',
-              footer: (
+              placement: 'start',  // 设置消息的放置位置
+              footer: (  // 设置消息的底部内容
                 <div style={{ display: 'flex' }}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} />
                   <Button type="text" size="small" icon={<CopyOutlined />} />
@@ -365,6 +368,8 @@ const Independent: React.FC = () => {
             },
             user: { placement: 'end' },
           }}
+          autoScroll  // 在新消息添加时，自动将滚动条滚到底部，确保用户总是看到最新的对话内容。
+          style={{ height: '100%', paddingInline: 'calc(calc(100% - 700px) /2)' }}  // 当前屏幕宽度减去 700px 后除以 2，也就是 左右各留一半的空白，使消息列表居中显示在 max-width: 700px 的区域内。
         />
       ) : (
         <Space
