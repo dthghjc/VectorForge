@@ -119,11 +119,16 @@
 }
 
 .markdown-body {
+  background: transparent;
   background-color: transparent;
   font-size: 14px;
   line-height: 1.6;
   color: inherit;
 
+  .hljs {
+    background: transparent;
+  }
+  
   p {
     margin: 0;
   }
