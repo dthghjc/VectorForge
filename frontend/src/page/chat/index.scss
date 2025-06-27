@@ -117,3 +117,47 @@
   margin: 0 auto;
   color: rgba(0, 0, 0, 0.88);
 }
+
+.markdown-body {
+  background-color: transparent;
+  font-size: 14px;
+  line-height: 1.6;
+  color: inherit;
+
+  p {
+    margin: 0;
+  }
+
+  code {
+    background-color: rgba(0, 0, 0, 0.06); // 淡灰色，融合气泡
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+  }
+
+  pre {
+    background-color: rgba(0, 0, 0, 0.06); // 同样融合感
+    padding: 12px;
+    border-radius: 6px;
+    overflow: auto;
+    font-family: 'Fira Code', monospace;
+    margin: 8px 0;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  ul, ol {
+    margin: 0;
+    padding-left: 1.2em;
+  }
+
+  blockquote {
+    margin: 0;
+    padding-left: 1em;
+    border-left: 3px solid #ccc;
+    color: #666;
+    font-style: italic;
+  }
+}
