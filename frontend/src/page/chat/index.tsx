@@ -399,6 +399,7 @@ const Independent: React.FC = () => {
             }
           />
           <Flex gap={16}>
+            {/* 右侧占位页里的两个 Prompts 面板（“Hot Topics”） */}
             <Prompts
               items={[HOT_TOPICS]}
               styles={{
@@ -417,6 +418,7 @@ const Independent: React.FC = () => {
               className="chat-prompt"
             />
 
+            {/* 右侧占位页里的两个 Prompts 面板（“Design Guide”） */}
             <Prompts
               items={[DESIGN_GUIDE]}
               styles={{
@@ -438,6 +440,7 @@ const Independent: React.FC = () => {
       )}
     </div>
   );
+  {/* 附件上传 */}
   const senderHeader = (
     <Sender.Header
       title="Upload File"
@@ -461,9 +464,10 @@ const Independent: React.FC = () => {
       />
     </Sender.Header>
   );
+  {/* 输入框 */}
   const chatSender = (
     <>
-      {/* 🌟 提示词 */}
+      {/* 🌟 4个快捷提示词 */}
       <Prompts
         items={SENDER_PROMPTS}
         onItemClick={(info) => {

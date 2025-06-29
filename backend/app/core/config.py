@@ -57,8 +57,12 @@ class Settings(BaseSettings):
         description="访问令牌过期时间（分钟）"
     )
     
-    # Dify API Keys 配置
+    # Dify API Keys 配置（用于验证来自Dify的请求）
     DIFY_API_KEYS: str = Field(default="", description="Dify API Keys，逗号分隔")
+    
+    # Dify 服务配置（用于后端调用Dify API）
+    DIFY_API_URL: str = Field(default="https://api.dify.ai/v1", description="Dify API 基础URL")
+    DIFY_API_KEY: str = Field(default="", description="调用Dify API的密钥")
     
     @property
     def dify_api_keys_list(self) -> List[str]:
