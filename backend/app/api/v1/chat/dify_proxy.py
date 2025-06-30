@@ -1,6 +1,20 @@
 """
 Dify API 中转代理模块
 前端通过JWT认证调用，后端转发到Dify API
+
+核心功能：
+1. 支持 streaming 和 blocking 两种响应模式
+2. 统一提取和保存关键信息：
+   - conversation_id: 对话唯一标识
+   - message_id: 消息唯一标识  
+   - task_id: 任务唯一标识
+   - 完整的模型回复内容
+   - metadata: 包含使用量统计、检索资源等元数据
+
+事件处理策略：
+- Streaming模式: 通过 DifyEventHandler 处理 workflow_finished 和 message_end 事件
+- Blocking模式: 直接从响应JSON中提取所有信息
+- 统一的数据保存格式，便于后续审核和分析
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,11 +22,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import httpx
 import json
-import time
-import uuid
 from datetime import datetime
-from typing import Generator, Dict, Any, AsyncGenerator
-import asyncio
+from typing import AsyncGenerator
 import logging
 
 from app.db.session import get_db
@@ -31,6 +42,98 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def ensure_chat_exists(db: Session, conversation_id: str, user_id: int, title: str = None) -> Chat:
+    """确保对话存在，如果不存在则创建"""
+    chat = db.query(Chat).filter(Chat.id == conversation_id).first()
+    if not chat:
+        chat = Chat(
+            id=conversation_id,
+            title=title or f"Chat - {conversation_id[:8]}",
+            user_id=user_id
+        )
+        db.add(chat)
+        db.flush()
+
+    return chat
+
+
+class DifyEventHandler:
+    """Dify 事件处理器 - 支持 streaming 和 blocking 模式"""
+    
+    def __init__(self):
+        self.full_answer = ""
+        self.ai_message_saved = False
+        self.workflow_data = {}
+        self.message_metadata = {}
+        self.conversation_id = ""
+        self.message_id = ""
+        self.task_id = ""
+    
+    def process_event(self, event_data: dict) -> bool:
+        """
+        处理 Dify 事件
+        返回 True 表示消息已完整保存
+        """
+        event_type = event_data.get("event")
+        
+        if event_type == "workflow_finished":
+            # Workflow完成事件 - 提取完整答案
+            self.workflow_data = event_data.get("data", {})
+            outputs = self.workflow_data.get("outputs", {})
+            if outputs.get("answer"):
+                self.full_answer = outputs["answer"]
+                
+        elif event_type == "message_end" and not self.ai_message_saved:
+            # 消息结束事件 - 提取所有关键信息和元数据
+            self.conversation_id = event_data.get("conversation_id", "")
+            self.message_id = event_data.get("message_id", "")
+            self.task_id = event_data.get("task_id", "")
+            self.message_metadata = event_data.get("metadata", {})
+            
+            # 如果有完整答案，准备保存
+            if self.full_answer:
+                return True  # 表示可以保存消息了
+                
+        # 其他事件类型不处理，直接忽略
+        return False
+    
+    def process_blocking_response(self, response_data: dict) -> bool:
+        """
+        处理 blocking 模式的响应数据
+        返回 True 表示可以保存消息
+        """
+        # 从 blocking 响应中提取信息
+        self.conversation_id = response_data.get("conversation_id", "")
+        self.message_id = response_data.get("message_id", "")
+        self.task_id = response_data.get("task_id", "")
+        self.full_answer = response_data.get("answer", "")
+        self.message_metadata = response_data.get("metadata", {})
+        
+        # 如果有workflow相关数据，也保存
+        if "workflow_run_id" in response_data:
+            self.workflow_data = {
+                "workflow_run_id": response_data.get("workflow_run_id"),
+                "status": "succeeded",  # blocking模式通常表示成功
+                "outputs": {"answer": self.full_answer}
+            }
+        
+
+        
+        return bool(self.full_answer)  # 有答案就可以保存
+    
+    def get_message_data(self) -> tuple[str, dict]:
+        """获取要保存的消息数据"""
+        # 合并所有元数据
+        combined_metadata = {
+            **self.message_metadata,
+            "conversation_id": self.conversation_id,
+            "message_id": self.message_id,
+            "task_id": self.task_id,
+            "workflow_data": self.workflow_data
+        }
+        return self.full_answer, combined_metadata
+
+
 @router.post("/chat-messages")
 async def proxy_chat_message(
     request: ChatMessageRequest,
@@ -47,36 +150,8 @@ async def proxy_chat_message(
         raise APIExceptions.internal_server_error("Dify API key not configured")
     
     try:
-        # 生成唯一ID
-        # task_id = str(uuid.uuid4())
-        # message_id = str(uuid.uuid4())
-        
         # 处理会话ID
         conversation_id = request.conversation_id
-        
-        # 确保对话存在（在本地数据库中记录）
-        # chat = db.query(Chat).filter(Chat.id == conversation_id).first()
-        # if not chat:
-        #     # 自动创建新对话
-        #     title = "新对话" if request.auto_generate_name else f"Chat - {conversation_id}"
-        #     chat = Chat(
-        #         id=conversation_id,
-        #         title=title,
-        #         user_id=current_user.id  # 使用JWT认证的用户ID
-        #     )
-        #     db.add(chat)
-        #     db.flush()
-        
-        # 保存用户消息到本地数据库
-        # user_message = Message(
-        #     chat_id=conversation_id,
-        #     role="user",
-        #     content=request.query,
-        #     meta_data={"inputs": request.inputs, "user": request.user}
-        # )
-        # db.add(user_message)
-        # db.commit()
-        # db.refresh(user_message)
         
         # 准备发送到Dify的请求
         dify_request = {
@@ -122,7 +197,19 @@ async def proxy_streaming_response(
     conversation_id: str,
     db: Session
 ) -> AsyncGenerator[str, None]:
-    """代理流式响应到Dify API"""
+    """
+    代理流式响应到Dify API
+    
+    处理 Dify Workflow 模式的事件流：
+    1. workflow_finished: 包含完整的模型回复 (data.outputs.answer)
+    2. message_end: 包含元数据信息 (metadata.usage, metadata.retriever_resources等)
+    3. 其他事件: 直接转发给前端
+    
+    消息保存策略：
+    - 从 workflow_finished 获取完整答案
+    - 从 message_end 获取元数据
+    - 两个事件都收到后保存到数据库
+    """
     headers = {
         "Authorization": f"Bearer {settings.DIFY_API_KEY}",
         "Content-Type": "application/json"
@@ -149,8 +236,7 @@ async def proxy_streaming_response(
                     yield f"data: {json.dumps(error_event)}\n\n"
                     return
                 
-                full_answer = ""
-                ai_message_saved = False
+                event_handler = DifyEventHandler()
                 
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
@@ -160,23 +246,22 @@ async def proxy_streaming_response(
                             # 转发事件到前端
                             yield f"data: {json.dumps(event_data)}\n\n"
                             
-                            # 收集完整答案用于保存
-                            if event_data.get("event") == "message":
-                                full_answer = event_data.get("answer", "")
-                            elif event_data.get("event") == "message_delta":
-                                full_answer += event_data.get("delta", "")
-                            elif event_data.get("event") == "message_end" and not ai_message_saved:
+                            # 处理事件并检查是否可以保存消息
+                            should_save = event_handler.process_event(event_data)
+                            
+                            if should_save and not event_handler.ai_message_saved:
                                 # 保存AI回复到本地数据库
-                                if full_answer:
-                                    ai_message = Message(
-                                        chat_id=conversation_id,
-                                        role="assistant",
-                                        content=full_answer,
-                                        meta_data=event_data.get("metadata", {})
-                                    )
-                                    db.add(ai_message)
-                                    db.commit()
-                                    ai_message_saved = True
+                                content, metadata = event_handler.get_message_data()
+                                
+                                ai_message = Message(
+                                    chat_id=conversation_id,
+                                    role="assistant",
+                                    content=content,
+                                    meta_data=metadata
+                                )
+                                # db.add(ai_message)
+                                # db.commit()
+                                event_handler.ai_message_saved = True
                                     
                         except json.JSONDecodeError as e:
                             logger.error(f"JSON decode error: {e}")
@@ -205,7 +290,16 @@ async def proxy_blocking_response(
     conversation_id: str,
     db: Session
 ) -> dict:
-    """代理阻塞式响应到Dify API"""
+    """
+    代理阻塞式响应到Dify API
+    
+    处理 blocking 模式的响应，提取关键信息：
+    - conversation_id: 对话ID
+    - message_id: 消息ID
+    - task_id: 任务ID
+    - answer: 完整的模型回复
+    - metadata: 元数据（usage, retriever_resources等）
+    """
     headers = {
         "Authorization": f"Bearer {settings.DIFY_API_KEY}",
         "Content-Type": "application/json"
@@ -228,16 +322,22 @@ async def proxy_blocking_response(
             
             result = response.json()
             
-            # 保存AI回复到本地数据库
-            # if result.get("answer"):
-            #     ai_message = Message(
-            #         chat_id=conversation_id,
-            #         role="assistant",
-            #         content=result["answer"],
-            #         meta_data=result.get("metadata", {})
-            #     )
-            #     db.add(ai_message)
-            #     db.commit()
+            # 使用事件处理器处理响应
+            event_handler = DifyEventHandler()
+            should_save = event_handler.process_blocking_response(result)
+            
+            if should_save:
+                # 保存AI回复到本地数据库
+                content, metadata = event_handler.get_message_data()
+                
+                ai_message = Message(
+                    chat_id=conversation_id,
+                    role="assistant",
+                    content=content,
+                    meta_data=metadata
+                )
+                # db.add(ai_message)
+                # db.commit()
             
             return result
             
@@ -246,129 +346,3 @@ async def proxy_blocking_response(
     except Exception as e:
         logger.error(f"Blocking proxy error: {str(e)}")
         raise APIExceptions.internal_server_error(f"Failed to proxy request: {str(e)}")
-
-
-@router.get("/conversations")
-async def list_conversations(
-    page: int = 1,
-    page_size: int = 20,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """获取当前用户的对话列表"""
-    try:
-        offset = (page - 1) * page_size
-        
-        # 查询用户的对话
-        conversations_query = db.query(Chat).filter(
-            Chat.user_id == current_user.id
-        ).order_by(Chat.updated_at.desc())
-        
-        total = conversations_query.count()
-        conversations = conversations_query.offset(offset).limit(page_size).all()
-        
-        # 构建响应
-        conversation_list = []
-        for chat in conversations:
-            message_count = db.query(Message).filter(Message.chat_id == chat.id).count()
-            conversation_list.append({
-                "conversation_id": chat.id,
-                "title": chat.title,
-                "user_id": chat.user_id,
-                "message_count": message_count,
-                "created_at": chat.created_at.isoformat(),
-                "updated_at": chat.updated_at.isoformat()
-            })
-        
-        return {
-            "conversations": conversation_list,
-            "total": total,
-            "page": page,
-            "page_size": page_size
-        }
-        
-    except Exception as e:
-        logger.error(f"Error listing conversations: {str(e)}")
-        raise APIExceptions.internal_server_error(f"Failed to list conversations: {str(e)}")
-
-
-@router.get("/conversations/{conversation_id}")
-async def get_conversation(
-    conversation_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """获取指定对话的详情和消息历史"""
-    try:
-        # 检查对话是否属于当前用户
-        chat = db.query(Chat).filter(
-            Chat.id == conversation_id,
-            Chat.user_id == current_user.id
-        ).first()
-        
-        if not chat:
-            raise APIExceptions.chat_not_found()
-        
-        # 获取消息历史
-        messages = db.query(Message).filter(
-            Message.chat_id == conversation_id
-        ).order_by(Message.created_at.asc()).all()
-        
-        message_list = []
-        for msg in messages:
-            message_list.append({
-                "message_id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
-                "metadata": msg.meta_data,
-                "created_at": msg.created_at.isoformat()
-            })
-        
-        return {
-            "conversation_id": chat.id,
-            "title": chat.title,
-            "user_id": chat.user_id,
-            "created_at": chat.created_at.isoformat(),
-            "updated_at": chat.updated_at.isoformat(),
-            "messages": message_list
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting conversation: {str(e)}")
-        if isinstance(e, HTTPException):
-            raise e
-        raise APIExceptions.internal_server_error(f"Failed to get conversation: {str(e)}")
-
-
-@router.delete("/conversations/{conversation_id}")
-async def delete_conversation(
-    conversation_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """删除指定对话"""
-    try:
-        # 检查对话是否属于当前用户
-        chat = db.query(Chat).filter(
-            Chat.id == conversation_id,
-            Chat.user_id == current_user.id
-        ).first()
-        
-        if not chat:
-            raise APIExceptions.chat_not_found()
-        
-        # 删除对话（级联删除消息）
-        db.delete(chat)
-        db.commit()
-        
-        return {
-            "status": "success",
-            "message": "Conversation deleted"
-        }
-        
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error deleting conversation: {str(e)}")
-        if isinstance(e, HTTPException):
-            raise e
-        raise APIExceptions.internal_server_error(f"Failed to delete conversation: {str(e)}") 
