@@ -32,7 +32,7 @@ import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { renderMarkdown } from '../../utils/renderMarkdown';
-import { useStreamingBackendAgent } from '../../hooks/useBackendAgent';
+import { useStreamingBackendAgent } from '../../hooks/useBackendAgentSimple';
 
 type BubbleDataType = {
   role: string;

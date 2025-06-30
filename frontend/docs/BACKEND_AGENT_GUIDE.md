@@ -2,14 +2,58 @@
 
 ## 概述
 
-`useBackendAgent` 是为 VectorForge 项目专门设计的自定义 Agent Hook，它基于 Ant Design X 的 `useXAgent`，但完全适配了我们的后端 API 架构。
+`useBackendAgent` 是为 VectorForge 项目专门设计的自定义 Agent Hook，它基于 Ant Design X 的 `useXAgent`，但完全适配了我们的后端 API 架构，**并复用了现有的完整HTTP拦截器体系**。
+
+## 🎯 **复用现有HTTP工具的优势**
+
+你的项目已经有完整的HTTP拦截器体系（`/utils/http/`），我们的自定义Agent充分利用了这些现有工具：
+
+### ✅ **完整复用现有基础设施**
+- **JWT认证**: 复用 `http.ts` 中的请求拦截器逻辑
+- **错误处理**: 复用 `errorHandler.ts` 中的统一错误处理
+- **响应拦截**: 复用现有的响应拦截器
+- **API封装**: 复用 `request.ts` 中的 `post()` 方法
+
+### 📋 **两种实现方案**
+
+#### 1. **简化版 (`useBackendAgentSimple`) - 推荐**
+```typescript
+import { useStreamingBackendAgent } from '../hooks/useBackendAgentSimple';
+
+// 阻塞式（推荐，更稳定）
+const [agent] = useBlockingBackendAgent();
+
+// 流式（SSE支持）  
+const [agent] = useStreamingBackendAgent();
+```
+
+**特点：**
+- ✅ 阻塞式请求完全复用 `post()` 方法和所有拦截器
+- ✅ 流式请求使用 `fetch` + 手动认证头
+- ✅ 代码简洁，维护性好
+- ✅ 错误处理统一使用 `getErrorMessage()`
+
+#### 2. **完整版 (`useBackendAgent`) - 高级**
+```typescript
+import { useBackendAgent } from '../hooks/useBackendAgent';
+
+const [agent] = useBackendAgent({
+  baseURL: '/api/v1/dify',
+  response_mode: 'streaming'
+});
+```
+
+**特点：**
+- ✅ 更完整的拦截器集成
+- ✅ 支持更多自定义配置
+- ⚠️ 代码稍复杂
 
 ## 核心特性
 
-- ✅ **JWT 认证**: 自动从 Redux Store 或 SessionStorage 获取 JWT Token
-- ✅ **流式响应**: 支持 Server-Sent Events (SSE) 实时数据流
-- ✅ **阻塞式响应**: 支持传统的 HTTP 请求-响应模式
-- ✅ **错误处理**: 完整的错误处理和用户反馈
+- ✅ **JWT 认证**: 自动从现有认证体系获取Token
+- ✅ **流式响应**: 支持 Server-Sent Events (SSE) 实时数据流  
+- ✅ **阻塞式响应**: 复用现有 axios 配置
+- ✅ **错误处理**: 完全复用现有错误处理机制
 - ✅ **请求取消**: 支持 AbortController 中断请求
 - ✅ **类型安全**: 完整的 TypeScript 类型支持
 
@@ -25,27 +69,49 @@ const [agent] = useXAgent<BubbleDataType>({
 });
 ```
 
-### ✅ 自定义 useBackendAgent (安全代理)
+### ✅ 自定义 useBackendAgent (安全代理 + 复用现有工具)
 ```typescript
-// 通过 VectorForge 后端代理，安全且统一
-const [agent] = useStreamingBackendAgent();
-// 或
-const [agent] = useBackendAgent({ 
-  response_mode: 'streaming',
-  baseURL: '/api/v1/dify' 
-});
+// 通过 VectorForge 后端代理，复用现有HTTP拦截器
+import { useStreamingBackendAgent } from '../hooks/useBackendAgentSimple';
+
+const [agent] = useStreamingBackendAgent(); // ✅ 安全 + 复用基础设施
+```
+
+## 架构流程
+
+```mermaid
+graph TD
+    A[useBackendAgent] --> B{请求模式}
+    B -->|阻塞式| C[复用 post() 方法]
+    C --> D[axios 请求拦截器]
+    D --> E[添加 JWT Token]
+    E --> F[发送到后端 API]
+    F --> G[axios 响应拦截器]
+    G --> H[统一错误处理]
+    H --> I[返回处理后数据]
+    
+    B -->|流式| J[fetch + 手动认证]
+    J --> K[添加 JWT Token]
+    K --> F
+    F --> L[SSE 流式数据]
+    L --> M[实时UI更新]
+    
+    style C fill:#e1f5fe
+    style D fill:#e8f5e8
+    style G fill:#e8f5e8
+    style H fill:#fff3e0
 ```
 
 ## 使用方法
 
-### 1. 基本用法
+### 1. 基本用法（复用现有HTTP工具）
 
 ```typescript
-import { useStreamingBackendAgent } from '../hooks/useBackendAgent';
+import { useStreamingBackendAgent } from '../hooks/useBackendAgentSimple';
 import { useXChat } from '@ant-design/x';
 
 function ChatComponent() {
-  // 创建后端 Agent
+  // 创建后端 Agent - 自动复用所有HTTP拦截器
   const [agent] = useStreamingBackendAgent();
   
   // 获取请求状态
@@ -54,6 +120,18 @@ function ChatComponent() {
   // 配置 XChat
   const { onRequest, messages, setMessages } = useXChat({
     agent,
+    // 复用现有的错误处理机制
+    requestFallback: (_, { error }) => {
+      if (error.name === 'AbortError') {
+        return { content: '请求已取消', role: 'assistant' };
+      }
+      
+      // 这里的错误已经被 getErrorMessage() 处理过
+      return {
+        content: `请求失败：${error.message}`,
+        role: 'assistant',
+      };
+    },
     transformMessage: (info) => {
       const { originMessage, chunk } = info || {};
       let currentContent = '';
@@ -107,87 +185,41 @@ const [agent] = useBackendAgent({
 
 // 或使用便捷方法
 const [streamingAgent] = useStreamingBackendAgent();  // 流式
-const [blockingAgent] = useBlockingBackendAgent();    // 阻塞式
+const [blockingAgent] = useBlockingBackendAgent();    // 阻塞式（推荐）
 ```
 
-### 3. 错误处理
+## 🔧 **现有HTTP工具集成详情**
 
+### 1. **JWT认证集成**
 ```typescript
-const { onRequest, messages } = useXChat({
-  agent,
-  requestFallback: (_, { error }) => {
-    if (error.name === 'AbortError') {
-      return {
-        content: '请求已取消',
-        role: 'assistant',
-      };
-    }
-    
-    // JWT 过期或认证失败
-    if (error.message.includes('未登录')) {
-      return {
-        content: '登录已过期，请重新登录',
-        role: 'assistant',
-      };
-    }
-    
-    return {
-      content: `请求失败：${error.message}`,
-      role: 'assistant',
-    };
-  },
-});
+// 复用现有的认证逻辑 (utils/http/http.ts)
+// ✅ 自动从 Redux Store 获取 token
+// ✅ 自动从 sessionStorage 获取 token
+// ✅ 自动处理 401 错误和登出
 ```
 
-## 架构流程
-
-```mermaid
-graph TD
-    A[前端 useBackendAgent] --> B[JWT Token 验证]
-    B --> C[构建请求体]
-    C --> D[发送到 /api/v1/dify/chat-messages]
-    D --> E[后端 JWT 认证]
-    E --> F[转发到 Dify API]
-    F --> G[处理响应]
-    G --> H{响应模式}
-    H -->|streaming| I[SSE 流式数据]
-    H -->|blocking| J[JSON 阻塞响应]
-    I --> K[前端实时渲染]
-    J --> K
-```
-
-## 数据格式
-
-### 请求格式
+### 2. **错误处理集成**
 ```typescript
-interface BackendRequestInput {
-  messages?: BackendMessage[];
-  message?: BackendMessage;
-  conversation_id?: string;
-  inputs?: Record<string, any>;
-  response_mode?: 'streaming' | 'blocking';
-}
+// 复用现有的错误处理 (utils/errorHandler.ts)
+// ✅ 统一的错误消息格式化
+// ✅ HTTP状态码错误处理
+// ✅ 网络错误处理
 ```
 
-### 流式响应格式
+### 3. **请求拦截器集成**
 ```typescript
-// SSE 事件格式
-data: {"event": "message_delta", "delta": "你好", "conversation_id": "conv_123"}
-data: {"event": "workflow_finished", "data": {"outputs": {"answer": "完整回答"}}}
-data: {"event": "message_end", "metadata": {"usage": {...}}}
+// 复用现有的请求拦截器
+// ✅ 自动添加 Authorization 头
+// ✅ 白名单URL处理
+// ✅ Token刷新机制
 ```
 
-### 阻塞式响应格式
-```json
-{
-  "event": "message",
-  "answer": "你好！我是AI助手...",
-  "conversation_id": "conv_123",
-  "message_id": "msg_456",
-  "metadata": {
-    "usage": {"total_tokens": 150}
-  }
-}
+### 4. **响应拦截器集成** 
+```typescript
+// 复用现有的响应拦截器
+// ✅ 业务状态码检查
+// ✅ 自动解包响应数据
+// ✅ 401错误自动处理
 ```
 
 ## 与原版 useXAgent 的差异
@@ -195,42 +227,37 @@ data: {"event": "message_end", "metadata": {"usage": {...}}}
 | 特性 | 原版 useXAgent | 自定义 useBackendAgent |
 |------|---------------|----------------------|
 | **安全性** | ❌ 前端暴露 API Key | ✅ 后端安全代理 |
-| **认证** | ❌ 无认证机制 | ✅ JWT Token 认证 |
+| **认证** | ❌ 无认证机制 | ✅ 复用完整JWT体系 |
 | **数据存储** | ❌ 无存储 | ✅ 自动保存到数据库 |
-| **错误处理** | ⚠️ 基础错误处理 | ✅ 完整错误处理 |
-| **可扩展性** | ❌ 固定第三方 API | ✅ 可配置多种后端 |
+| **错误处理** | ⚠️ 基础错误处理 | ✅ 复用统一错误处理 |
+| **可扩展性** | ❌ 固定第三方 API | ✅ 基于现有HTTP工具 |
+| **维护性** | ❌ 独立维护 | ✅ 复用现有基础设施 |
 
 ## 最佳实践
 
-### 1. 统一使用自定义 Agent
+### 1. 优先使用简化版
 ```typescript
-// ✅ 推荐：使用自定义 Backend Agent
-import { useStreamingBackendAgent } from '../hooks/useBackendAgent';
+// ✅ 推荐：使用简化版，完全复用现有工具
+import { useStreamingBackendAgent } from '../hooks/useBackendAgentSimple';
 
-// ❌ 避免：直接使用原版 useXAgent
-import { useXAgent } from '@ant-design/x';
+// ❌ 避免：不必要的复杂实现
 ```
 
-### 2. 合理处理认证失败
+### 2. 选择合适的响应模式
 ```typescript
-// 监听认证错误，自动跳转登录
-const handleAuthError = (error: Error) => {
-  if (error.message.includes('未登录')) {
-    window.location.href = '/login';
-  }
-};
+// ✅ 推荐：阻塞式（更稳定，复用所有拦截器）
+const [agent] = useBlockingBackendAgent();
+
+// ⚠️ 流式：功能更丰富，但实现稍复杂
+const [agent] = useStreamingBackendAgent();
 ```
 
-### 3. 优化用户体验
+### 3. 复用错误处理
 ```typescript
-// 显示加载状态
-const loading = agent.isRequesting();
+// ✅ 统一错误处理，无需重复实现
+import { getErrorMessage } from '../utils/errorHandler';
 
-// 提供取消功能
-const abortController = useRef<AbortController>(null);
-const handleCancel = () => {
-  abortController.current?.abort();
-};
+// 错误已经被 getErrorMessage() 标准化处理
 ```
 
 ## 故障排除
@@ -238,13 +265,12 @@ const handleCancel = () => {
 ### 常见问题
 
 1. **"未登录，请先登录"**
-   - 检查 JWT Token 是否存在
-   - 确认 Token 是否过期
-   - 验证 Redux Store 状态
+   - ✅ 自动使用现有认证检查逻辑
+   - ✅ 自动触发现有登出流程
 
 2. **"请求失败: 401"**
-   - Token 格式错误
-   - 后端认证配置问题
+   - ✅ 自动清除token并跳转登录页
+   - ✅ 复用现有的401处理逻辑
 
 3. **流式数据解析失败**
    - 检查后端 SSE 格式
@@ -253,28 +279,18 @@ const handleCancel = () => {
 ### 调试技巧
 
 ```typescript
-// 开启详细日志
-const [agent] = useBackendAgent({
-  response_mode: 'streaming'
-});
-
-// 监听所有事件
-const { onRequest } = useXChat({
-  agent,
-  transformMessage: (info) => {
-    console.log('收到数据:', info); // 调试用
-    // 处理逻辑...
-  },
-});
+// 复用现有的HTTP调试
+// 所有axios请求都会在浏览器Network面板显示
+// 错误会被统一的错误处理器捕获和记录
 ```
 
 ## 总结
 
-自定义的 `useBackendAgent` 为 VectorForge 项目提供了：
+自定义的 `useBackendAgent` 最大的优势是**完全复用了你现有的HTTP基础设施**：
 
-- 🔒 **更安全**的 API 调用方式
-- 🚀 **更好**的开发体验
-- 📊 **完整**的数据记录
-- 🎯 **统一**的错误处理
+- 🔧 **零重复工作** - 复用所有现有拦截器和错误处理
+- 🔒 **同样安全** - 使用相同的JWT认证机制  
+- 🚀 **更易维护** - 基于现有工具，减少维护负担
+- 📊 **统一标准** - 遵循项目现有的HTTP处理规范
 
-它是对 Ant Design X 原版 `useXAgent` 的增强，专门为我们的业务场景设计。 
+它不是重新发明轮子，而是**智能复用现有轮子**，让Ant Design X与你的后端API完美集成。 
