@@ -25,6 +25,7 @@ import json
 from datetime import datetime
 from typing import AsyncGenerator
 import logging
+import uuid
 
 from app.db.session import get_db
 from app.models.chat import Chat, Message
@@ -58,16 +59,23 @@ def ensure_chat_exists(db: Session, conversation_id: str, user_id: int, title: s
 
 
 class DifyEventHandler:
-    """Dify 事件处理器 - 支持 streaming 和 blocking 模式"""
+    """Dify 事件处理器 - 支持 streaming 和 blocking 模式，延迟存储用户消息"""
     
-    def __init__(self):
+    def __init__(self, user_query: str, user_metadata: dict, current_user_id: int):
+        # AI回复相关
         self.full_answer = ""
         self.ai_message_saved = False
         self.workflow_data = {}
         self.message_metadata = {}
         self.conversation_id = ""
-        self.message_id = ""
+        self.ai_message_id = ""  # AI回复的message_id
         self.task_id = ""
+        
+        # 用户消息相关 - 延迟存储
+        self.user_query = user_query
+        self.user_metadata = user_metadata
+        self.current_user_id = current_user_id
+        self.user_message_id = str(uuid.uuid4())  # 程序生成用户消息ID
     
     def process_event(self, event_data: dict) -> bool:
         """
@@ -86,7 +94,7 @@ class DifyEventHandler:
         elif event_type == "message_end" and not self.ai_message_saved:
             # 消息结束事件 - 提取所有关键信息和元数据
             self.conversation_id = event_data.get("conversation_id", "")
-            self.message_id = event_data.get("message_id", "")
+            self.ai_message_id = event_data.get("message_id", "")
             self.task_id = event_data.get("task_id", "")
             self.message_metadata = event_data.get("metadata", {})
             
@@ -104,7 +112,7 @@ class DifyEventHandler:
         """
         # 从 blocking 响应中提取信息
         self.conversation_id = response_data.get("conversation_id", "")
-        self.message_id = response_data.get("message_id", "")
+        self.ai_message_id = response_data.get("message_id", "")
         self.task_id = response_data.get("task_id", "")
         self.full_answer = response_data.get("answer", "")
         self.message_metadata = response_data.get("metadata", {})
@@ -121,13 +129,58 @@ class DifyEventHandler:
         
         return bool(self.full_answer)  # 有答案就可以保存
     
+    def save_conversation_to_db(self, db: Session) -> bool:
+        """
+        保存完整对话到数据库（用户消息 + AI回复）
+        返回 True 表示保存成功
+        """
+        try:
+            # 确保对话存在
+            chat = ensure_chat_exists(
+                db=db,
+                conversation_id=self.conversation_id,
+                user_id=self.current_user_id,
+                title="新对话"
+            )
+            
+            # 保存用户消息
+            user_message = Message(
+                id=self.user_message_id,
+                chat_id=self.conversation_id,
+                role="user",
+                content=self.user_query,
+                meta_data=self.user_metadata
+            )
+            db.add(user_message)
+            
+            # 保存AI回复
+            ai_content, ai_metadata = self.get_message_data()
+            ai_message = Message(
+                id=self.ai_message_id,
+                chat_id=self.conversation_id,
+                role="assistant",
+                content=ai_content,
+                meta_data=ai_metadata
+            )
+            db.add(ai_message)
+            
+            # 提交事务
+            db.commit()
+            self.ai_message_saved = True
+            return True
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to save conversation: {str(e)}")
+            return False
+    
     def get_message_data(self) -> tuple[str, dict]:
         """获取要保存的消息数据"""
         # 合并所有元数据
         combined_metadata = {
             **self.message_metadata,
             "conversation_id": self.conversation_id,
-            "message_id": self.message_id,
+            "message_id": self.ai_message_id,
             "task_id": self.task_id,
             "workflow_data": self.workflow_data
         }
@@ -153,6 +206,14 @@ async def proxy_chat_message(
         # 处理会话ID
         conversation_id = request.conversation_id
         
+        # 准备用户消息元数据
+        user_message_metadata = {
+            "inputs": request.inputs,
+            "user": current_user.username,
+            "files": [file.dict() for file in request.files] if request.files else [],
+            "response_mode": request.response_mode
+        }
+        
         # 准备发送到Dify的请求
         dify_request = {
             "query": request.query,
@@ -173,7 +234,7 @@ async def proxy_chat_message(
         # 根据响应模式处理
         if request.response_mode == "streaming":
             return StreamingResponse(
-                proxy_streaming_response(dify_request, conversation_id, db),
+                proxy_streaming_response(dify_request, request.query, user_message_metadata, current_user.id, db),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -182,7 +243,7 @@ async def proxy_chat_message(
             )
         else:
             # blocking模式
-            return await proxy_blocking_response(dify_request, conversation_id, db)
+            return await proxy_blocking_response(dify_request, request.query, user_message_metadata, current_user.id, db)
             
     except Exception as e:
         db.rollback()
@@ -194,7 +255,9 @@ async def proxy_chat_message(
 
 async def proxy_streaming_response(
     dify_request: dict,
-    conversation_id: str,
+    user_query: str,
+    user_metadata: dict,
+    current_user_id: int,
     db: Session
 ) -> AsyncGenerator[str, None]:
     """
@@ -206,9 +269,9 @@ async def proxy_streaming_response(
     3. 其他事件: 直接转发给前端
     
     消息保存策略：
-    - 从 workflow_finished 获取完整答案
-    - 从 message_end 获取元数据
-    - 两个事件都收到后保存到数据库
+    - 延迟保存：等到获得完整AI回复后，一起保存用户消息和AI回复
+    - 使用 Dify 返回的 conversation_id 和 AI message_id
+    - 用户 message_id 由程序生成
     """
     headers = {
         "Authorization": f"Bearer {settings.DIFY_API_KEY}",
@@ -236,7 +299,7 @@ async def proxy_streaming_response(
                     yield f"data: {json.dumps(error_event)}\n\n"
                     return
                 
-                event_handler = DifyEventHandler()
+                event_handler = DifyEventHandler(user_query, user_metadata, current_user_id)
                 
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
@@ -250,18 +313,8 @@ async def proxy_streaming_response(
                             should_save = event_handler.process_event(event_data)
                             
                             if should_save and not event_handler.ai_message_saved:
-                                # 保存AI回复到本地数据库
-                                content, metadata = event_handler.get_message_data()
-                                
-                                ai_message = Message(
-                                    chat_id=conversation_id,
-                                    role="assistant",
-                                    content=content,
-                                    meta_data=metadata
-                                )
-                                # db.add(ai_message)
-                                # db.commit()
-                                event_handler.ai_message_saved = True
+                                # 保存完整对话到数据库（用户消息 + AI回复）
+                                event_handler.save_conversation_to_db(db)
                                     
                         except json.JSONDecodeError as e:
                             logger.error(f"JSON decode error: {e}")
@@ -287,7 +340,9 @@ async def proxy_streaming_response(
 
 async def proxy_blocking_response(
     dify_request: dict,
-    conversation_id: str,
+    user_query: str,
+    user_metadata: dict,
+    current_user_id: int,
     db: Session
 ) -> dict:
     """
@@ -299,6 +354,9 @@ async def proxy_blocking_response(
     - task_id: 任务ID
     - answer: 完整的模型回复
     - metadata: 元数据（usage, retriever_resources等）
+    
+    消息保存策略：
+    - 延迟保存：等到获得完整AI回复后，一起保存用户消息和AI回复
     """
     headers = {
         "Authorization": f"Bearer {settings.DIFY_API_KEY}",
@@ -323,21 +381,12 @@ async def proxy_blocking_response(
             result = response.json()
             
             # 使用事件处理器处理响应
-            event_handler = DifyEventHandler()
+            event_handler = DifyEventHandler(user_query, user_metadata, current_user_id)
             should_save = event_handler.process_blocking_response(result)
             
             if should_save:
-                # 保存AI回复到本地数据库
-                content, metadata = event_handler.get_message_data()
-                
-                ai_message = Message(
-                    chat_id=conversation_id,
-                    role="assistant",
-                    content=content,
-                    meta_data=metadata
-                )
-                # db.add(ai_message)
-                # db.commit()
+                # 保存完整对话到数据库（用户消息 + AI回复）
+                event_handler.save_conversation_to_db(db)
             
             return result
             
