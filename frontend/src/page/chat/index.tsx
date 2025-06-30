@@ -25,7 +25,6 @@ import {
   Prompts,
   Sender,
   Welcome,
-  useXAgent,
   useXChat,
 } from '@ant-design/x';
 import { Button, Flex, type GetProp, Space, Spin, message } from 'antd';
@@ -33,13 +32,14 @@ import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { renderMarkdown } from '../../utils/renderMarkdown';
+import { useStreamingBackendAgent } from '../../hooks/useBackendAgent';
 
 type BubbleDataType = {
   role: string;
   content: string;
 };
 
-/* 左侧“最近会话”列表的初始数据 */
+/* 左侧"最近会话"列表的初始数据 */
 const DEFAULT_CONVERSATIONS_ITEMS = [
   {
     key: 'default-0',
@@ -58,7 +58,7 @@ const DEFAULT_CONVERSATIONS_ITEMS = [
   },
 ];
 
-/* 右侧占位页里的两个 Prompts 面板（“Hot Topics”）的静态数据 */
+/* 右侧占位页里的两个 Prompts 面板（"Hot Topics"）的静态数据 */
 const HOT_TOPICS = {
   key: '1',
   label: 'Hot Topics',
@@ -91,7 +91,7 @@ const HOT_TOPICS = {
   ],
 };
 
-/* 右侧占位页里的两个 Prompts 面板（“Design Guide”）的静态数据 */
+/* 右侧占位页里的两个 Prompts 面板（"Design Guide"）的静态数据 */
 const DESIGN_GUIDE = {
   key: '2',
   label: 'Design Guide',
@@ -147,8 +147,6 @@ const SENDER_PROMPTS: GetProp<typeof Prompts, 'items'> = [
   },
 ];
 
-
-
 const Independent: React.FC = () => {
   const abortController = useRef<AbortController>(null);
 
@@ -168,13 +166,8 @@ const Independent: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
 
   // ==================== Runtime ====================
-  // 创建 XAgent 实例，用于处理 AI 请求
-  // 配置 LLM 接口的封装，返回 agent。
-  const [agent] = useXAgent<BubbleDataType>({
-    baseURL: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-chat',
-    dangerouslyApiKey: import.meta.env.VITE_DEEPSEEK_API_KEY,
-  });
+  // 使用自定义的后端Agent，连接VectorForge API
+  const [agent] = useStreamingBackendAgent();
 
   // 用于全局按钮状态
   const loading = agent.isRequesting();
@@ -196,40 +189,37 @@ const Independent: React.FC = () => {
         role: 'assistant',
       };
     },
-    // 流式响应分块时如何拼接“思考 / 内容”
+    // 流式响应分块时如何拼接内容
     transformMessage: (info) => {
       const { originMessage, chunk } = info || {};
       let currentContent = '';
-      let currentThink = '';
+      
       try {
         if (chunk?.data && !chunk?.data.includes('DONE')) {
-          const message = JSON.parse(chunk?.data);
-          currentThink = message?.choices?.[0]?.delta?.reasoning_content || '';
-          currentContent = message?.choices?.[0]?.delta?.content || '';
+          const eventData = JSON.parse(chunk?.data);
+          
+          // 处理不同类型的事件
+          if (eventData.event === 'message_delta' && eventData.delta) {
+            currentContent = eventData.delta;
+          } else if (eventData.event === 'workflow_finished' && eventData.data?.outputs?.answer) {
+            currentContent = eventData.data.outputs.answer;
+          } else if (eventData.content) {
+            currentContent = eventData.content;
+          }
         }
       } catch (error) {
-        console.error(error);
+        console.error('解析消息失败:', error);
       }
 
-      let content = '';
-
-      if (!originMessage?.content && currentThink) {
-        content = `<think>${currentThink}`;
-      } else if (
-        originMessage?.content?.includes('<think>') &&
-        !originMessage?.content.includes('</think>') &&
-        currentContent
-      ) {
-        content = `${originMessage?.content}</think>${currentContent}`;
-      } else {
-        content = `${originMessage?.content || ''}${currentThink}${currentContent}`;
-      }
+      // 拼接内容
+      const content = `${originMessage?.content || ''}${currentContent}`;
+      
       return {
         content: content,
         role: 'assistant',
       };
     },
-    // 把内部 AbortController 暴露给外部（点击“取消”用）。
+    // 把内部 AbortController 暴露给外部（点击"取消"用）。
     resolveAbortController: (controller) => {
       abortController.current = controller;
     },
@@ -399,7 +389,7 @@ const Independent: React.FC = () => {
             }
           />
           <Flex gap={16}>
-            {/* 右侧占位页里的两个 Prompts 面板（“Hot Topics”） */}
+            {/* 右侧占位页里的两个 Prompts 面板（"Hot Topics"） */}
             <Prompts
               items={[HOT_TOPICS]}
               styles={{
@@ -418,7 +408,7 @@ const Independent: React.FC = () => {
               className="chat-prompt"
             />
 
-            {/* 右侧占位页里的两个 Prompts 面板（“Design Guide”） */}
+            {/* 右侧占位页里的两个 Prompts 面板（"Design Guide"） */}
             <Prompts
               items={[DESIGN_GUIDE]}
               styles={{
