@@ -24,7 +24,6 @@ import httpx
 import json
 from datetime import datetime
 from typing import AsyncGenerator
-import logging
 import uuid
 
 from app.db.session import get_db
@@ -39,18 +38,23 @@ from app.schemas.dify import (
 from app.api.v1.auth.router import get_current_user
 from app.core.config import settings
 from app.core.exceptions import APIExceptions
-
-logger = logging.getLogger(__name__)
+from app.services.title_generation import generate_conversation_title
 router = APIRouter()
 
 
-def ensure_chat_exists(db: Session, conversation_id: str, user_id: int, title: str = None) -> Chat:
+async def ensure_chat_exists(db: Session, conversation_id: str, user_id: int, user_query: str = None) -> Chat:
     """确保对话存在，如果不存在则创建"""
     chat = db.query(Chat).filter(Chat.id == conversation_id).first()
     if not chat:
+        # 只有在创建新对话时才生成标题
+        if user_query:
+            title = await generate_conversation_title(user_query)
+        else:
+            title = f"Chat - {conversation_id[:8]}"
+            
         chat = Chat(
             id=conversation_id,
-            title=title or f"Chat - {conversation_id[:8]}",
+            title=title,
             user_id=user_id
         )
         db.add(chat)
@@ -130,18 +134,18 @@ class DifyEventHandler:
         
         return bool(self.full_answer)  # 有答案就可以保存
     
-    def save_conversation_to_db(self, db: Session) -> bool:
+    async def save_conversation_to_db(self, db: Session) -> bool:
         """
         保存完整对话到数据库（用户消息 + AI回复）
         返回 True 表示保存成功
         """
         try:
-            # 确保对话存在
-            chat = ensure_chat_exists(
+            # 确保对话存在（只有新对话才会生成标题）
+            chat = await ensure_chat_exists(
                 db=db,
                 conversation_id=self.conversation_id,
                 user_id=self.current_user_id,
-                title=f"chat-{self.conversation_id}"
+                user_query=self.user_query
             )
             
             # 保存用户消息
@@ -172,7 +176,6 @@ class DifyEventHandler:
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Failed to save conversation: {str(e)}")
             return False
     
     def get_message_data(self) -> tuple[str, dict]:
@@ -248,7 +251,6 @@ async def proxy_chat_message(
             
     except Exception as e:
         db.rollback()
-        logger.error(f"Dify proxy error: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise APIExceptions.internal_server_error(f"Failed to proxy chat message: {str(e)}")
@@ -292,7 +294,6 @@ async def proxy_streaming_response(
                 
                 if response.status_code != 200:
                     error_text = await response.aread()
-                    logger.error(f"Dify API error: {response.status_code} - {error_text}")
                     error_event = {
                         "event": "error",
                         "error": f"Dify API error: {response.status_code}"
@@ -315,13 +316,11 @@ async def proxy_streaming_response(
                             
                             if should_save and not event_handler.ai_message_saved:
                                 # 保存完整对话到数据库（用户消息 + AI回复）
-                                event_handler.save_conversation_to_db(db)
+                                await event_handler.save_conversation_to_db(db)
                                     
                         except json.JSONDecodeError as e:
-                            logger.error(f"JSON decode error: {e}")
                             continue
                         except Exception as e:
-                            logger.error(f"Error processing stream event: {e}")
                             continue
                             
     except httpx.TimeoutException:
@@ -331,7 +330,6 @@ async def proxy_streaming_response(
         }
         yield f"data: {json.dumps(error_event)}\n\n"
     except Exception as e:
-        logger.error(f"Streaming proxy error: {str(e)}")
         error_event = {
             "event": "error",
             "error": str(e)
@@ -376,7 +374,6 @@ async def proxy_blocking_response(
             
             if response.status_code != 200:
                 error_text = response.text
-                logger.error(f"Dify API error: {response.status_code} - {error_text}")
                 raise APIExceptions.internal_server_error(f"Dify API error: {response.status_code}")
             
             result = response.json()
@@ -387,14 +384,13 @@ async def proxy_blocking_response(
             
             if should_save:
                 # 保存完整对话到数据库（用户消息 + AI回复）
-                event_handler.save_conversation_to_db(db)
+                await event_handler.save_conversation_to_db(db)
             
             return result
             
     except httpx.TimeoutException:
         raise APIExceptions.internal_server_error("Request timeout")
     except Exception as e:
-        logger.error(f"Blocking proxy error: {str(e)}")
         raise APIExceptions.internal_server_error(f"Failed to proxy request: {str(e)}")
 
 
@@ -439,7 +435,6 @@ async def stop_chat_message(
             
             if response.status_code != 200:
                 error_text = response.text
-                logger.error(f"Dify stop API error: {response.status_code} - {error_text}")
                 
                 # 根据状态码提供更详细的错误信息
                 if response.status_code == 404:
@@ -454,17 +449,13 @@ async def stop_chat_message(
             
             # 验证Dify返回的结果格式
             if result.get("result") == "success":
-                logger.info(f"Successfully stopped chat message task: {task_id}")
                 return StopChatResponse(result="success")
             else:
-                logger.warning(f"Unexpected stop response from Dify: {result}")
                 return StopChatResponse(result="success")  # 仍然返回成功，因为请求已处理
                 
     except httpx.TimeoutException:
-        logger.error(f"Timeout when stopping task: {task_id}")
         raise APIExceptions.internal_server_error("Stop request timeout")
     except Exception as e:
-        logger.error(f"Failed to stop chat message task {task_id}: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise APIExceptions.internal_server_error(f"Failed to stop chat message: {str(e)}")

@@ -10,6 +10,7 @@ from app.crud.chat import chat_crud, message_crud
 from app.db.conversation_cache import conversation_cache
 from app.schemas.chat import ChatCreate, MessageCreate
 from app.models.chat import Chat, Message
+from app.services.title_generation import generate_conversation_title
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,25 @@ class ConversationService:
         self.cache.load_conversation(chat.id, [])
         
         logger.info(f"Created new chat {chat.id} for user {user_id}")
+        return chat
+    
+    async def create_chat_with_auto_title(self, user_id: str, user_query: str, description: str = None) -> Chat:
+        """创建新对话并自动生成标题"""
+        # 生成标题
+        generated_title = await generate_conversation_title(user_query)
+        
+        chat_create = ChatCreate(
+            title=generated_title,
+            description=description
+        )
+        
+        # 在数据库中创建对话
+        chat = chat_crud.create_chat(self.db, chat_create, user_id)
+        
+        # 初始化缓存
+        self.cache.load_conversation(chat.id, [])
+        
+        logger.info(f"Created new chat {chat.id} with auto-generated title '{generated_title}' for user {user_id}")
         return chat
     
     def add_message(
