@@ -121,6 +121,12 @@ class ErrorEvent(BaseModel):
     event: Literal["error"] = "error"
     error: str = Field(..., description="错误信息")
 
+# ========== 停止响应 ==========
+
+class StopChatResponse(BaseModel):
+    """停止对话响应"""
+    result: Literal["success"] = Field(default="success", description="操作结果")
+
 # Union type for all possible streaming events
 StreamingEvent = Union[
     MessageEvent,

@@ -33,7 +33,8 @@ from app.models.user import User
 from app.schemas.dify import (
     ChatMessageRequest,
     ChatCompletionResponse,
-    StreamingEvent
+    StreamingEvent,
+    StopChatResponse
 )
 from app.api.v1.auth.router import get_current_user
 from app.core.config import settings
@@ -140,7 +141,7 @@ class DifyEventHandler:
                 db=db,
                 conversation_id=self.conversation_id,
                 user_id=self.current_user_id,
-                title="新对话"
+                title=f"chat-{self.conversation_id}"
             )
             
             # 保存用户消息
@@ -395,3 +396,78 @@ async def proxy_blocking_response(
     except Exception as e:
         logger.error(f"Blocking proxy error: {str(e)}")
         raise APIExceptions.internal_server_error(f"Failed to proxy request: {str(e)}")
+
+
+@router.post("/chat-messages/{task_id}/stop")
+async def stop_chat_message(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> StopChatResponse:
+    """
+    停止生成对话消息
+    
+    用于停止正在进行的流式对话生成，仅支持流式模式。
+    前端可以在用户中断对话时调用此接口来停止Dify的输出。
+    
+    Args:
+        task_id: 任务ID，可在流式返回事件中获取
+        current_user: 当前认证用户
+        
+    Returns:
+        StopChatResponse: 停止操作结果
+        
+    Raises:
+        APIExceptions.internal_server_error: Dify API密钥未配置或停止请求失败
+        APIExceptions.bad_request: 任务ID无效
+    """
+    if not settings.DIFY_API_KEY:
+        raise APIExceptions.internal_server_error("Dify API key not configured")
+    
+    if not task_id or not task_id.strip():
+        raise APIExceptions.bad_request("Task ID is required")
+    
+    try:
+        headers = {
+            "Authorization": f"Bearer {settings.DIFY_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"{settings.DIFY_API_URL}/chat-messages/{task_id}/stop"
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers)
+            
+            if response.status_code != 200:
+                error_text = response.text
+                logger.error(f"Dify stop API error: {response.status_code} - {error_text}")
+                
+                # 根据状态码提供更详细的错误信息
+                if response.status_code == 404:
+                    raise APIExceptions.bad_request(f"Task ID '{task_id}' not found or already completed")
+                elif response.status_code == 400:
+                    raise APIExceptions.bad_request("Invalid task ID format")
+                else:
+                    raise APIExceptions.internal_server_error(f"Dify stop API error: {response.status_code}")
+            
+            # 解析Dify的响应
+            result = response.json()
+            
+            # 验证Dify返回的结果格式
+            if result.get("result") == "success":
+                logger.info(f"Successfully stopped chat message task: {task_id}")
+                return StopChatResponse(result="success")
+            else:
+                logger.warning(f"Unexpected stop response from Dify: {result}")
+                return StopChatResponse(result="success")  # 仍然返回成功，因为请求已处理
+                
+    except httpx.TimeoutException:
+        logger.error(f"Timeout when stopping task: {task_id}")
+        raise APIExceptions.internal_server_error("Stop request timeout")
+    except Exception as e:
+        logger.error(f"Failed to stop chat message task {task_id}: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise APIExceptions.internal_server_error(f"Failed to stop chat message: {str(e)}")
+    
+    
+    
