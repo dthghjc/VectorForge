@@ -19,6 +19,7 @@ class DifyMessageResponse(BaseModel):
 
 # ========== Dify 对话消息 API Schema ==========
 
+# 向 Dify 发送请求的请求体中的文件对象
 class InputFile(BaseModel):
     """输入文件对象"""
     type: Literal["image", "document"] = Field(..., description="文件类型")
@@ -26,16 +27,20 @@ class InputFile(BaseModel):
     url: Optional[str] = Field(None, description="文件URL（远程文件）")
     upload_file_id: Optional[str] = Field(None, description="上传文件ID（本地文件）")
 
+# 向 Dify 发送请求的请求体
 class ChatMessageRequest(BaseModel):
     """发送对话消息请求"""
     query: str = Field(..., description="用户输入/提问内容")
-    user: str = Field(..., description="用户标识，应用内唯一")
+    # user: str = Field(..., description="用户标识，应用内唯一")
     inputs: Dict[str, Any] = Field(default_factory=dict, description="App定义的各变量值")
     response_mode: Literal["streaming", "blocking"] = Field(default="streaming", description="响应模式")
     conversation_id: Optional[str] = Field(None, description="会话ID，用于继续之前的对话")
     files: Optional[List[InputFile]] = Field(None, description="文件列表，仅当模型支持Vision能力时可用")
-    auto_generate_name: bool = Field(default=True, description="自动生成会话标题")
+    # auto_generate_name: bool = Field(default=True, description="自动生成会话标题")
 
+# ========== 阻塞模式响应 ==========
+
+# 阻塞模式的 DIFY 完整响应中的使用情况统计 metadata.usage
 class Usage(BaseModel):
     """使用情况统计"""
     prompt_tokens: int = Field(..., description="提示词token数")
@@ -51,6 +56,7 @@ class Usage(BaseModel):
     currency: str = Field(..., description="货币")
     latency: float = Field(..., description="延迟（毫秒）")
 
+# 阻塞模式的 DIFY 完整响应中的检索资源 metadata.retriever_resources
 class RetrieverResource(BaseModel):
     """检索资源"""
     position: int = Field(..., description="位置")
@@ -62,11 +68,13 @@ class RetrieverResource(BaseModel):
     score: float = Field(..., description="相关性分数")
     content: str = Field(..., description="内容")
 
+# 阻塞模式的 DIFY 完整响应中的元数据 metadata
 class ChatMetadata(BaseModel):
     """对话元数据"""
     usage: Usage = Field(..., description="使用情况统计")
     retriever_resources: List[RetrieverResource] = Field(default_factory=list, description="检索资源列表")
 
+# 阻塞模式的 DIFY 完整响应
 class ChatCompletionResponse(BaseModel):
     """阻塞模式完整响应"""
     event: Literal["message"] = Field(default="message", description="事件类型")

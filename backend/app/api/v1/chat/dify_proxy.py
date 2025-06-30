@@ -48,48 +48,48 @@ async def proxy_chat_message(
     
     try:
         # 生成唯一ID
-        task_id = str(uuid.uuid4())
-        message_id = str(uuid.uuid4())
+        # task_id = str(uuid.uuid4())
+        # message_id = str(uuid.uuid4())
         
         # 处理会话ID
-        conversation_id = request.conversation_id or str(uuid.uuid4())
+        conversation_id = request.conversation_id
         
         # 确保对话存在（在本地数据库中记录）
-        chat = db.query(Chat).filter(Chat.id == conversation_id).first()
-        if not chat:
-            # 自动创建新对话
-            title = "新对话" if request.auto_generate_name else f"Chat - {conversation_id}"
-            chat = Chat(
-                id=conversation_id,
-                title=title,
-                user_id=current_user.id  # 使用JWT认证的用户ID
-            )
-            db.add(chat)
-            db.flush()
+        # chat = db.query(Chat).filter(Chat.id == conversation_id).first()
+        # if not chat:
+        #     # 自动创建新对话
+        #     title = "新对话" if request.auto_generate_name else f"Chat - {conversation_id}"
+        #     chat = Chat(
+        #         id=conversation_id,
+        #         title=title,
+        #         user_id=current_user.id  # 使用JWT认证的用户ID
+        #     )
+        #     db.add(chat)
+        #     db.flush()
         
         # 保存用户消息到本地数据库
-        user_message = Message(
-            chat_id=conversation_id,
-            role="user",
-            content=request.query,
-            meta_data={"inputs": request.inputs, "user": request.user}
-        )
-        db.add(user_message)
-        db.commit()
-        db.refresh(user_message)
+        # user_message = Message(
+        #     chat_id=conversation_id,
+        #     role="user",
+        #     content=request.query,
+        #     meta_data={"inputs": request.inputs, "user": request.user}
+        # )
+        # db.add(user_message)
+        # db.commit()
+        # db.refresh(user_message)
         
         # 准备发送到Dify的请求
         dify_request = {
             "query": request.query,
-            "user": request.user or current_user.username,  # 使用前端提供的user或当前用户名
+            "user": current_user.username,
             "inputs": request.inputs,
             "response_mode": request.response_mode,
-            "auto_generate_name": request.auto_generate_name
+            "auto_generate_name": True
         }
         
         # 如果有conversation_id，添加到请求中
-        if request.conversation_id:
-            dify_request["conversation_id"] = request.conversation_id
+        if conversation_id:
+            dify_request["conversation_id"] = conversation_id
             
         # 如果有文件，添加到请求中
         if request.files:
@@ -229,15 +229,15 @@ async def proxy_blocking_response(
             result = response.json()
             
             # 保存AI回复到本地数据库
-            if result.get("answer"):
-                ai_message = Message(
-                    chat_id=conversation_id,
-                    role="assistant",
-                    content=result["answer"],
-                    meta_data=result.get("metadata", {})
-                )
-                db.add(ai_message)
-                db.commit()
+            # if result.get("answer"):
+            #     ai_message = Message(
+            #         chat_id=conversation_id,
+            #         role="assistant",
+            #         content=result["answer"],
+            #         meta_data=result.get("metadata", {})
+            #     )
+            #     db.add(ai_message)
+            #     db.commit()
             
             return result
             
