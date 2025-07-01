@@ -127,7 +127,7 @@
 
 .markdown-body {
   background: transparent;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: inherit;
 
@@ -148,6 +148,7 @@
     font-family: 'Fira Code', monospace;  /* 等宽字体 */
     margin: 12px 0;  /* 上下外边距 */
     box-shadow: none;  /* 无阴影 */
+    font-size: 14px;  /* 代码块保持较小字体 */
   }
 
   pre code {

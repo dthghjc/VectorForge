@@ -64,53 +64,85 @@ const Independent: React.FC = () => {
 
   // 创建 XChat 实例，用于处理聊天逻辑
   // 绑定 agent，处理请求、消息流、消息转换等
+  /*
+   * messages: 一个数组，包含了当前所有聊天消息的数据。
+   *           发送消息、接收到 AI 回复、或者消息状态更新时，这个 messages 数组的内容都会随之改变。
+   * setMessages：一个 React 状态更新函数，与 messages 状态变量配对。用于安全地更新 messages 数组。
+   *              当调用 setMessages 时，React 会检测到状态变化，并重新渲染使用 messages 的组件（比如 Bubble.List），从而更新 UI。
+   * onRequest：一个函数，用于触发一次聊天请求（通常是向 AI 后端发送用户输入）。
+   *            当用户在输入框中按下回车或点击发送按钮时，你会调用 onRequest 并传入用户的消息内容。useXChat 内部会负责处理这个请求的整个生命周期：
+   */
   const { onRequest, messages, setMessages } = useXChat({
+    // 绑定自定义的后端 Agent，用于与 VectorForge API 通信
     agent,
-    // 接口报错或被 abort 时替代回复
+    // 请求失败时的降级处理函数
+    // 当接口报错或被用户主动取消时，返回友好的错误提示
     requestFallback: (_, { error }) => {
+      // 检查是否为用户主动取消请求
       if (error.name === 'AbortError') {
         return {
           content: 'Request is aborted',
           role: 'assistant',
         };
       }
+      // 其他错误情况返回通用错误提示
       return {
         content: 'Request failed, please try again!',
         role: 'assistant',
       };
     },
-    // 流式响应分块时如何拼接内容
+    
+    // 流式响应消息转换函数
+    // 用于处理从后端接收到的 SSE 数据流，将分块数据拼接成完整消息
     transformMessage: (info) => {
-      const { originMessage, chunk } = info || {};
-      let currentContent = '';
+      const { originMessage, chunk } = info || {};  // 解构 info 对象，获取原始消息和当前数据块
+      let currentContent = '';  // 初始化当前数据块解析出的内容
       
       try {
+        // 检查数据块是否有效且不包含结束标记 'DONE'
         if (chunk?.data && !chunk?.data.includes('DONE')) {
+          // 解析 JSON 格式的事件数据
           const eventData = JSON.parse(chunk?.data);
           
-          // 处理不同类型的事件
-          if (eventData.event === 'message_delta' && eventData.delta) {
+          // 根据事件类型提取相应的内容
+          // 优先处理 'message' 事件，并从 'answer' 字段获取内容
+          if (eventData.event === 'message' && typeof eventData.answer === 'string') {
+            currentContent = eventData.answer;
+          } else if (eventData.event === 'message_delta' && eventData.delta) {
+            // 1. message_delta 事件：通常用于逐字或逐句的增量更新
+            // 增量消息事件：提取 delta 字段作为当前内容
             currentContent = eventData.delta;
           } else if (eventData.event === 'workflow_finished' && eventData.data?.outputs?.answer) {
+            // 2. workflow_finished 事件：表示某个内部工作流完成，并提供了最终答案
+            // 工作流完成事件：提取最终答案
             currentContent = eventData.data.outputs.answer;
           } else if (eventData.content) {
+            // 3. 通用 content 字段：如果以上都不匹配，直接取 content 字段
+            // 通用内容事件：直接提取 content 字段
             currentContent = eventData.content;
           }
         }
       } catch (error) {
+        // 解析失败时记录错误日志
         console.error('解析消息失败:', error);
       }
 
-      // 拼接内容
+      // 将新内容拼接到原有消息内容后面，构建完整消息
       const content = `${originMessage?.content || ''}${currentContent}`;
       
+      // 返回标准格式的助手消息
       return {
         content: content,
         role: 'assistant',
       };
     },
-    // 把内部 AbortController 暴露给外部（点击"取消"用）。
+    
+    // AbortController 暴露函数
+    // 将内部控制器实例赋值给外部的 useRef 对象
+    // controller 就是 useXChat 内部创建并用于管理其网络请求的 AbortController 实例
     resolveAbortController: (controller) => {
+      // 将传入的 controller 赋值给外部声明的 abortController.current
+      // 在取消按钮的 onClick 事件中调用 abortController.current.abort() 来中断当前正在进行的网络请求。
       abortController.current = controller;
     },
   });
@@ -219,21 +251,24 @@ const Independent: React.FC = () => {
   // 中部聊天记录
   const chatList = (
     <div className="chat-list">
+      {/* 三元运算符，如果 messages 有值，则显示消息列表，否则显示占位页 */}
       {messages?.length ? (
         /* 🌟 消息列表 */
         <Bubble.List
           items={messages?.map((i, index) => ({
-            ...i.message,
-            key: i.id ?? index.toString(),
+            ...i.message,  //展开 message 对象
+            key: i.id ?? index.toString(),  // 设置消息的唯一标识,如果 id 不存在，则使用 index 作为唯一标识
             classNames: {
-              content: i.status === 'loading' ? 'loading-message' : '',
+              content: i.status === 'loading' ? 'loading-message' : '',  // 如果消息状态为 loading，则添加 loading-message 类名
             },
-            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false,
+            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>{/*💗*/}</> } : false,  // 如果消息状态为 loading，则添加 typing(打字机效果) 属性
           }))}
+          // 定义了不同角色（assistant 和 user）的消息显示方式。
           roles={{
             assistant: {
-              placement: 'start',
-              messageRender: renderMarkdown,
+              placement: 'start',  // 助手消息显示在聊天气泡的左侧（或开始位置）
+              messageRender: renderMarkdown,  // 设置消息的渲染方式为 renderMarkdown
+              // 在助手消息下方显示一个页脚，包含四个 Button 组件：重载、复制、点赞和点踩
               footer: (
                 <div style={{ display: 'flex' }}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} />
@@ -242,14 +277,15 @@ const Independent: React.FC = () => {
                   <Button type="text" size="small" icon={<DislikeOutlined />} />
                 </div>
               ),
-              loadingRender: () => <Spin size="small" />,
+              loadingRender: () => <Spin size="small" />,  // 当消息状态为 loading 时，显示一个小的加载动画
             },
-            user: { placement: 'end' },
+            user: { placement: 'end' },  // 用户消息显示在聊天气泡的右侧（或结束位置）
           }}
           autoScroll  // 在新消息添加时，自动将滚动条滚到底部，确保用户总是看到最新的对话内容。
           style={{ height: '100%', paddingInline: 'calc(calc(100% - 700px) /2)' }}  // 当前屏幕宽度减去 700px 后除以 2，也就是 左右各留一半的空白，使消息列表居中显示在 max-width: 700px 的区域内。
         />
       ) : (
+        /* 🌟 占位页 */
         <Space
           direction="vertical"
           size={16}
