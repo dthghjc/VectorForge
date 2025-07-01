@@ -120,7 +120,7 @@
 
 /* 助手气泡背景透明 + 无边框 + 无阴影 */
 .ant-bubble[role='assistant'] .ant-bubble-content-filled {
-  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
   border: none !important;
 }

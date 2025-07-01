@@ -1,0 +1,714 @@
+[
+    {
+      "event": "workflow_started",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+        "workflow_id": "a262dd6f-eec6-41c4-8e70-06521cae73f8",
+        "inputs": {
+          "sys.query": "流式输出测试",
+          "sys.files": [],
+          "sys.conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+          "sys.user_id": "user_admin",
+          "sys.dialogue_count": 0,
+          "sys.app_id": "e93b696f-ce0a-4593-b289-665d9872fd9a",
+          "sys.workflow_id": "a262dd6f-eec6-41c4-8e70-06521cae73f8",
+          "sys.workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550"
+        },
+        "created_at": 1751345851
+      }
+    },
+    {
+      "event": "node_started",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "54f2723d-8e42-41d4-8b5a-5bf6a83ee28a",
+        "node_id": "1751261091932",
+        "node_type": "start",
+        "title": "开始",
+        "index": 1,
+        "predecessor_node_id": null,
+        "inputs": null,
+        "created_at": 1751345851,
+        "extras": {},
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null,
+        "parallel_run_id": null,
+        "agent_strategy": null
+      }
+    },
+    {
+      "event": "node_finished",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "54f2723d-8e42-41d4-8b5a-5bf6a83ee28a",
+        "node_id": "1751261091932",
+        "node_type": "start",
+        "title": "开始",
+        "index": 1,
+        "predecessor_node_id": null,
+        "inputs": {
+          "sys.query": "流式输出测试",
+          "sys.files": [],
+          "sys.conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+          "sys.user_id": "user_admin",
+          "sys.dialogue_count": 0,
+          "sys.app_id": "e93b696f-ce0a-4593-b289-665d9872fd9a",
+          "sys.workflow_id": "a262dd6f-eec6-41c4-8e70-06521cae73f8",
+          "sys.workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550"
+        },
+        "process_data": null,
+        "outputs": {
+          "sys.query": "流式输出测试",
+          "sys.files": [],
+          "sys.conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+          "sys.user_id": "user_admin",
+          "sys.dialogue_count": 0,
+          "sys.app_id": "e93b696f-ce0a-4593-b289-665d9872fd9a",
+          "sys.workflow_id": "a262dd6f-eec6-41c4-8e70-06521cae73f8",
+          "sys.workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550"
+        },
+        "status": "succeeded",
+        "error": null,
+        "elapsed_time": 0.11901,
+        "execution_metadata": {},
+        "created_at": 1751345851,
+        "finished_at": 1751345851,
+        "files": [],
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null
+      }
+    },
+    {
+      "event": "node_started",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "bbb5a23f-738e-467b-ad89-284b41c162e1",
+        "node_id": "llm",
+        "node_type": "llm",
+        "title": "LLM",
+        "index": 2,
+        "predecessor_node_id": "1751261091932",
+        "inputs": null,
+        "created_at": 1751345851,
+        "extras": {},
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null,
+        "parallel_run_id": null,
+        "agent_strategy": null
+      }
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "看",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "起来",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "你",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "想",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "进行",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "流",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "式",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "输出",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "测试",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "。如果",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "你",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "有",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "具体",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "的",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "内容",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "或",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "问题",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "需要",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "测试",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "，请",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "告诉",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "我",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "！",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "我",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "会",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "尽",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "力",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "帮助",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "你",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "。",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "message",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "answer": "",
+      "from_variable_selector": [
+        "llm",
+        "text"
+      ]
+    },
+    {
+      "event": "node_finished",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "bbb5a23f-738e-467b-ad89-284b41c162e1",
+        "node_id": "llm",
+        "node_type": "llm",
+        "title": "LLM",
+        "index": 2,
+        "predecessor_node_id": "1751261091932",
+        "inputs": {},
+        "process_data": {
+          "model_mode": "chat",
+          "prompts": [
+            {
+              "role": "user",
+              "text": "流式输出测试\n\n[]",
+              "files": []
+            }
+          ],
+          "model_provider": "langgenius/openai/openai",
+          "model_name": "gpt-4o-mini"
+        },
+        "outputs": {
+          "text": "看起来你想进行流式输出测试。如果你有具体的内容或问题需要测试，请告诉我！我 Pryde 尽力帮助你。",
+          "usage": {
+            "prompt_tokens": 13,
+            "prompt_unit_price": "0.15",
+            "prompt_price_unit": "0.000001",
+            "prompt_price": "0.000002",
+            "completion_tokens": 30,
+            "completion_unit_price": "0.6",
+            "completion_price_unit": "0.000001",
+            "completion_price": "0.000018",
+            "total_tokens": 43,
+            "total_price": "0.00002",
+            "currency": "USD",
+            "latency": 0.7936610839997229
+          },
+          "finish_reason": "stop",
+          "files": []
+        },
+        "status": "succeeded",
+        "error": null,
+        "elapsed_time": 1.209923,
+        "execution_metadata": {
+          "total_tokens": 43,
+          "total_price": "0.00002",
+          "currency": "USD"
+        },
+        "created_at": 1751345851,
+        "finished_at": 1751345852,
+        "files": [],
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null
+      }
+    },
+    {
+      "event": "node_started",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "c0eb3f3a-5771-4a8c-a98e-66a39af53b3b",
+        "node_id": "answer",
+        "node_type": "answer",
+        "title": "直接回复",
+        "index": 3,
+        "predecessor_node_id": "llm",
+        "inputs": null,
+        "created_at": 1751345852,
+        "extras": {},
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null,
+        "parallel_run_id": null,
+        "agent_strategy": null
+      }
+    },
+    {
+      "event": "node_finished",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "c0eb3f3a-5771-4a8c-a98e-66a39af53b3b",
+        "node_id": "answer",
+        "node_type": "answer",
+        "title": "直接回复",
+        "index": 3,
+        "predecessor_node_id": "llm",
+        "inputs": null,
+        "process_data": null,
+        "outputs": {
+          "answer": "看起来你想进行流式输出测试。如果你有具体的内容或问题需要测试，请告诉我！我 Pryde 尽力帮助你。",
+          "files": []
+        },
+        "status": "succeeded",
+        "error": null,
+        "elapsed_time": 0.030448,
+        "execution_metadata": {},
+        "created_at": 1751345852,
+        "finished_at": 1751345852,
+        "files": [],
+        "parallel_id": null,
+        "parallel_start_node_id": null,
+        "parent_parallel_id": null,
+        "parent_parallel_start_node_id": null,
+        "iteration_id": null,
+        "loop_id": null
+      }
+    },
+    {
+      "event": "workflow_finished",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "workflow_run_id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+      "data": {
+        "id": "d9a92ff2-136c-493f-9b98-f73c95e2d550",
+        "workflow_id": "a262dd6f-eec6-41c4-8e70-06521cae73f8",
+        "status": "succeeded",
+        "outputs": {
+          "answer": "看起来你想进行流式输出测试。如果你有具体的内容或问题需要测试，请告诉我！我 Pryde 尽力帮助你。"
+        },
+        "error": "",
+        "elapsed_time": 1.258164,
+        "total_tokens": 43,
+        "total_steps": 3,
+        "created_by": {
+          "id": "01fe3002-669e-4f6e-9c60-718982d78482",
+          "user": "user_admin"
+        },
+        "created_at": 1751345851,
+        "finished_at": 1751345852,
+        "exceptions_count": 0,
+        "files": []
+      }
+    },
+    {
+      "event": "message_end",
+      "conversation_id": "69969998-31e2-45a6-888a-324bcc46a87f",
+      "message_id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "created_at": 1751345851,
+      "task_id": "789ab090-8352-4e63-bb95-e064da785c94",
+      "id": "07b12c0c-4f58-425d-a4ec-7c7b7cf6f46f",
+      "metadata": {
+        "annotation_reply": null,
+        "retriever_resources": [],
+        "usage": {
+          "prompt_tokens": 13,
+          "prompt_unit_price": "0.15",
+          "prompt_price_unit": "0.000001",
+          "prompt_price": "0.000002",
+          "completion_tokens": 30,
+          "completion_unit_price": "0.6",
+          "completion_price_unit": "0.000001",
+          "completion_price": "0.000018",
+          "total_tokens": 43,
+          "total_price": "0.00002",
+          "currency": "USD",
+          "latency": 0.7936610839997229
+        }
+      },
+      "files": []
+    }
+  ]
