@@ -29,7 +29,7 @@ interface BackendAgentConfig {
 export function useBackendAgentSimple(config: BackendAgentConfig = {}) {
   const {
     baseURL = '/api/v1/dify',
-    response_mode = 'blocking' // 默认使用阻塞式，更稳定
+    response_mode = 'streaming'
   } = config;
 
   const customRequest: RequestFn<BackendMessage, BackendRequestInput, SSEOutput> = async (

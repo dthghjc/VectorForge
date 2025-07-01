@@ -224,27 +224,17 @@ const Independent: React.FC = () => {
         <Bubble.List
           items={messages?.map((i, index) => ({
             ...i.message,
-            key: i.id ?? index.toString(),  // 设置消息的唯一标识
-            content:
-              i.message.role === 'assistant'
-                ? (
-                    <div
-                      className="markdown-body"
-                      dangerouslySetInnerHTML={{
-                        __html: renderMarkdown(i.message.content),
-                      }}
-                    />
-                  )
-                : i.message.content,
+            key: i.id ?? index.toString(),
             classNames: {
               content: i.status === 'loading' ? 'loading-message' : '',
             },
-            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false, // 设置消息的加载状态
+            typing: i.status === 'loading' ? { step: 5, interval: 20, suffix: <>💗</> } : false,
           }))}
           roles={{
             assistant: {
-              placement: 'start',  // 设置消息的放置位置
-              footer: (  // 设置消息的底部内容
+              placement: 'start',
+              messageRender: renderMarkdown,
+              footer: (
                 <div style={{ display: 'flex' }}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} />
                   <Button type="text" size="small" icon={<CopyOutlined />} />

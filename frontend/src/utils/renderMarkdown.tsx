@@ -1,6 +1,9 @@
 import markdownit from 'markdown-it';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';      // ← 代码配色主题，可换
+import 'highlight.js/styles/github.css';
+import { Typography } from 'antd';
+import type { BubbleProps } from '@ant-design/x';
+import React from 'react';
 
 /* 创建 md 实例，接入 highlight.js */
 const md = markdownit({
@@ -16,6 +19,13 @@ const md = markdownit({
   },
 });
 
-export function renderMarkdown(content: string): string {
-  return md.render(content);
-}
+export const renderMarkdown: BubbleProps['messageRender'] = (content) => {
+  return (
+    <Typography>
+      <div 
+        className="markdown-body"
+        dangerouslySetInnerHTML={{ __html: md.render(content) }} 
+      />
+    </Typography>
+  );
+};
