@@ -25,7 +25,6 @@ class ConversationService:
         """创建新对话"""
         chat_create = ChatCreate(
             title=title or "新对话",
-            description=description
         )
         
         # 在数据库中创建对话
@@ -44,7 +43,6 @@ class ConversationService:
         
         chat_create = ChatCreate(
             title=generated_title,
-            description=description
         )
         
         # 在数据库中创建对话

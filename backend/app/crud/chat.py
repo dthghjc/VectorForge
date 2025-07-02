@@ -15,7 +15,6 @@ class ChatCRUD:
         chat = Chat(
             title=chat_create.title,
             user_id=user_id,
-            description=chat_create.description
         )
         db.add(chat)
         db.commit()

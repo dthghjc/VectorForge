@@ -36,7 +36,6 @@ class ChatCreate(ChatBase):
 class ChatUpdate(BaseModel):
     """对话更新"""
     title: Optional[str] = None
-    description: Optional[str] = None
 
 class ChatResponse(ChatBase):
     id: str
@@ -47,6 +46,28 @@ class ChatResponse(ChatBase):
     
     class Config:
         # 允许 Pydantic 从 ORM 对象（如 SQLAlchemy 的 Chat）的属性直接构建实例。
+        from_attributes = True
+
+# 轻量级对话响应（不包含消息列表）
+class ChatBasicResponse(ChatBase):
+    id: str
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0  # 消息数量统计
+    
+    class Config:
+        from_attributes = True
+
+# 包含消息的完整对话响应
+class ChatWithMessagesResponse(ChatBase):
+    id: str
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[MessageResponse] = []
+    
+    class Config:
         from_attributes = True
 
 # === 审核相关 ===

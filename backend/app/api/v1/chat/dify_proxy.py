@@ -29,6 +29,7 @@ import uuid
 from app.db.session import get_db
 from app.models.chat import Chat, Message
 from app.models.user import User
+from app.models.base import get_current_beijing_time
 from app.schemas.dify import (
     ChatMessageRequest,
     ChatCompletionResponse,
@@ -81,6 +82,7 @@ class DifyEventHandler:
         self.user_metadata = user_metadata
         self.current_user_id = current_user_id
         self.user_message_id = str(uuid.uuid4())  # 程序生成用户消息ID
+        self.user_message_created_at = get_current_beijing_time()  # 记录用户消息的真实时间（北京时间）
     
     def process_event(self, event_data: dict) -> bool:
         """
@@ -137,6 +139,7 @@ class DifyEventHandler:
     async def save_conversation_to_db(self, db: Session) -> bool:
         """
         保存完整对话到数据库（用户消息 + AI回复）
+        用户消息使用接收到消息的真实时间，AI回复使用完成回复的时间
         返回 True 表示保存成功
         """
         try:
@@ -148,17 +151,19 @@ class DifyEventHandler:
                 user_query=self.user_query
             )
             
-            # 保存用户消息
+            # 保存用户消息 - 使用真实的接收时间
             user_message = Message(
                 id=self.user_message_id,
                 chat_id=self.conversation_id,
                 role="user",
                 content=self.user_query,
-                meta_data=self.user_metadata
+                meta_data=self.user_metadata,
+                created_at=self.user_message_created_at,  # 使用记录的真实时间
+                updated_at=self.user_message_created_at   # 创建时更新时间与创建时间相同
             )
             db.add(user_message)
             
-            # 保存AI回复
+            # 保存AI回复 - 使用当前时间（回复完成时间）
             ai_content, ai_metadata = self.get_message_data()
             ai_message = Message(
                 id=self.ai_message_id,
@@ -166,6 +171,7 @@ class DifyEventHandler:
                 role="assistant",
                 content=ai_content,
                 meta_data=ai_metadata
+                # created_at 和 updated_at 使用默认值（当前时间）
             )
             db.add(ai_message)
             
