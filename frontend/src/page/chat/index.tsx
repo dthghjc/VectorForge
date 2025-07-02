@@ -30,6 +30,8 @@ import { DEFAULT_CONVERSATIONS_ITEMS } from './data/conversations';
 import { HOT_TOPICS, DESIGN_GUIDE } from './data/prompts';
 import { SENDER_PROMPTS } from './data/senderPrompts';
 
+import cflpLogo from '../../assets/cflplogo.png';
+
 type BubbleDataType = {
   role: string;
   content: string;
@@ -38,6 +40,11 @@ type BubbleDataType = {
 
 
 const Independent: React.FC = () => {
+  const [messageId, setMessageId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+
+  
   const abortController = useRef<AbortController>(null);
 
   // ==================== State ====================
@@ -105,7 +112,7 @@ const Independent: React.FC = () => {
           const eventData = JSON.parse(chunk?.data);
           
           // 根据事件类型提取相应的内容
-          // 优先处理 'message' 事件，并从 'answer' 字段获取内容
+          // 根据dify的规则，优先处理 'message' 事件，并从 'answer' 字段获取内容
           if (eventData.event === 'message' && typeof eventData.answer === 'string') {
             currentContent = eventData.answer;
           } else if (eventData.event === 'message_delta' && eventData.delta) {
@@ -116,6 +123,9 @@ const Independent: React.FC = () => {
             // 2. workflow_finished 事件：表示某个内部工作流完成，并提供了最终答案
             // 工作流完成事件：提取最终答案
             currentContent = eventData.data.outputs.answer;
+            if (eventData.message_id) { setMessageId(eventData.message_id); }
+            if (eventData.conversation_id) { setConversationId(eventData.conversation_id); }
+            if (eventData.task_id) { setTaskId(eventData.task_id); } 
           } else if (eventData.content) {
             // 3. 通用 content 字段：如果以上都不匹配，直接取 content 字段
             // 通用内容事件：直接提取 content 字段
@@ -148,17 +158,19 @@ const Independent: React.FC = () => {
   });
 
   // ==================== Event ====================
+  // 发送消息事件
   const onSubmit = (val: string) => {
-    if (!val) return;
+    if (!val) return;  // 如果输入值为空，则不发送
 
-    if (loading) {
+    if (loading) {  // 如果当前正在请求中，提示等待
       message.error('Request is in progress, please wait for the request to complete.');
       return;
     }
 
-    onRequest({
+    onRequest({  // 调用 onRequest 函数，传入一个对象，包含两个属性：stream 和 message
       stream: true,
       message: { role: 'user', content: val },
+      conversation_id: conversationId,
     });
   };
 
@@ -169,7 +181,7 @@ const Independent: React.FC = () => {
       {/* 🌟 Logo */}
       <div className="chat-logo">
         <img
-          src="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*eco6RrQhxbMAAAAAAAAAAAAADgCCAQ/original"
+          src={ cflpLogo }
           draggable={false}
           alt="logo"
           width={24}
@@ -294,9 +306,9 @@ const Independent: React.FC = () => {
         >
           <Welcome
             variant="borderless"
-            icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-            title="Hello, I'm Vector Forge"
-            description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
+            icon="https://cflp-top.bj.bcebos.com/zwdy-logo-top.png"
+            // title="Hello, I'm Vector Forge"
+            // description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
             extra={
               <Space>
                 <Button icon={<ShareAltOutlined />} />

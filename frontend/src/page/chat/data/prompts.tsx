@@ -12,27 +12,27 @@ export const HOT_TOPICS = {
   children: [
     {
       key: '1-1',
-      description: 'What has Ant Design X upgraded?',
+      description: '未来五年中国物流行业在供应链数字化、智能化和绿色化方面的主要发展趋势和挑战是什么？',
       icon: <span style={{ color: '#f93a4a', fontWeight: 700 }}>1</span>,
     },
     {
       key: '1-2',
-      description: 'New AGI Hybrid Interface',
+      description: '针对“双碳”目标，物流行业在碳排放标准和绿色运输补贴方面的政策要求是什么？',
       icon: <span style={{ color: '#ff6565', fontWeight: 700 }}>2</span>,
     },
     {
       key: '1-3',
-      description: 'What components are in Ant Design X?',
+      description: '在生鲜冷链物流领域，如何通过优化运输和仓储来降低损耗、提升时效？',
       icon: <span style={{ color: '#ff8f1f', fontWeight: 700 }}>3</span>,
     },
     {
       key: '1-4',
-      description: 'Come and discover the new design paradigm of the AI era.',
+      description: 'AI、物联网、大数据和区块链技术在物流领域有哪些最新应用进展？',
       icon: <span style={{ color: '#00000040', fontWeight: 700 }}>4</span>,
     },
     {
       key: '1-5',
-      description: 'How to quickly install and import components?',
+      description: '如何利用数据分析识别和评估运输风险（如延误、货损），并提供规避策略？',
       icon: <span style={{ color: '#00000040', fontWeight: 700 }}>5</span>,
     },
   ],
