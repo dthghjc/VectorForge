@@ -204,6 +204,7 @@ const Independent: React.FC = () => {
           ]);
           setCurConversation(now);
           setMessages([]);
+          setConversationId("");
         }}
         type="link"
         className="chat-add-btn"
