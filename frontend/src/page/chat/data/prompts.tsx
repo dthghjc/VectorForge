@@ -1,8 +1,8 @@
 import {
-  CommentOutlined,
-  HeartOutlined,
-  PaperClipOutlined,
-  SmileOutlined,
+  BulbOutlined,
+  RobotOutlined,
+  MessageOutlined,
+  DatabaseOutlined
 } from '@ant-design/icons';
 
 /* 右侧占位页里的两个 Prompts 面板（"Hot Topics"）的静态数据 */
@@ -41,31 +41,31 @@ export const HOT_TOPICS = {
 /* 右侧占位页里的两个 Prompts 面板（"Design Guide"）的静态数据 */
 export const DESIGN_GUIDE = {
   key: '2',
-  label: 'Design Guide',
+  label: '使用指南',
   children: [
     {
       key: '2-1',
-      icon: <HeartOutlined />,
-      label: 'Intention',
-      description: 'AI understands user needs and provides solutions.',
+      icon: <BulbOutlined />,
+      label: '理解意图',
+      description: '精准把握用户物流专业问题，提供定制化信息反馈。', // 已修改
     },
     {
       key: '2-2',
-      icon: <SmileOutlined />,
-      label: 'Role',
-      description: "AI's public persona and image",
+      icon: <RobotOutlined />,
+      label: '模型定位',
+      description: '汇聚物流行业海量知识，提供深度洞察与解决方案的专业AI模型。', // 已修改
     },
     {
       key: '2-3',
-      icon: <CommentOutlined />,
-      label: 'Chat',
-      description: 'How AI Can Express Itself in a Way Users Understand',
+      icon: <MessageOutlined />,
+      label: '提问方式',
+      description: '使用清晰、具体的中文提问，问题越明确，回答越精准。', // 已修改
     },
     {
       key: '2-4',
-      icon: <PaperClipOutlined />,
-      label: 'Interface',
-      description: 'AI balances "chat" & "do" behaviors.',
+      icon: <DatabaseOutlined />,
+      label: '数据与时效',
+      description: '提供数据可能基于特定时间点，请留意信息时效性。', // 已修改
     },
   ],
-}; 
+};

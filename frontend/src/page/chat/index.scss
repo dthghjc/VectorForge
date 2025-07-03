@@ -83,6 +83,7 @@
   }
 }
 
+
 .chat-list {
   flex: 1;
   overflow: auto;
@@ -116,6 +117,9 @@
   max-width: 700px;
   margin: 0 auto;
   color: rgba(0, 0, 0, 0.88);
+  .ant-prompts-desc {
+    display: none !important; // 确保隐藏该描述文本，并覆盖Ant Design原有样式
+  }
 }
 
 /* 助手气泡背景透明 + 无边框 + 无阴影 */

@@ -350,7 +350,7 @@ const Independent: React.FC = () => {
                 subItem: { background: '#ffffffa6' },
               }}
               onItemClick={(info) => {
-                onSubmit(info.data.description as string);
+                //onSubmit(info.data.description as string);
               }}
               className="chat-prompt"
             />
@@ -395,6 +395,7 @@ const Independent: React.FC = () => {
         styles={{
           item: { padding: '6px 12px' },
         }}
+        wrap={true}
         className="sender-prompt"
       />
       {/* 🌟 输入框 */}
