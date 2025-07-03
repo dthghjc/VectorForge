@@ -65,6 +65,8 @@ const Independent: React.FC = () => {
   // 加载状态
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [currentChatLoading, setCCurrentChatLoading] = useState(false);
+  // 记录已更新过名称的chat，避免重复更新
+  const [updatedChatNames, setUpdatedChatNames] = useState<Set<string>>(new Set());
 
   // 当前激活会话 key，决定右侧显示哪段聊天记录
   const [curConversation, setCurConversation] = useState('');
@@ -136,7 +138,11 @@ const Independent: React.FC = () => {
             // 工作流完成事件：提取最终答案
             currentContent = eventData.data.outputs.answer;
             if (eventData.message_id) { setMessageId(eventData.message_id); }
-            if (eventData.conversation_id) { setConversationId(eventData.conversation_id); }
+            if (eventData.conversation_id) { 
+              setConversationId(eventData.conversation_id);
+              // 如果是临时chat且获得了真实的conversation_id，更新chat名称
+              updateChatName(eventData.conversation_id);
+            }
             if (eventData.task_id) { setTaskId(eventData.task_id); } 
           } else if (eventData.content) {
             // 3. 通用 content 字段：如果以上都不匹配，直接取 content 字段
@@ -234,6 +240,56 @@ const Independent: React.FC = () => {
   useEffect(() => {
     loadConversations();
   }, []);
+
+  // 判断是否是临时chat（时间戳格式的key）
+  const isTempChat = (chatKey: string): boolean => {
+    return /^\d{13}$/.test(chatKey); // 13位时间戳
+  };
+
+  // 更新chat名称（仅对临时chat且未更新过的进行更新）
+  const updateChatName = async (realChatId: string) => {
+    // 如果当前conversation不是临时chat，或者已经更新过，则跳过
+    if (!isTempChat(curConversation) || updatedChatNames.has(curConversation)) {
+      return;
+    }
+
+    try {
+      // 从后端获取chat详情来获取真实标题
+      const chatData = await getChat(realChatId);
+      
+      // 更新conversations列表中对应项的key和label
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.key === curConversation 
+            ? { 
+                ...conv, 
+                key: realChatId,
+                label: chatData.title || `Conversation ${realChatId.slice(0, 8)}` 
+              }
+            : conv
+        )
+      );
+      
+      // 更新消息历史：将临时key的消息历史迁移到真实chatId
+      setMessageHistory(prevHistory => {
+        const newHistory = { ...prevHistory };
+        if (newHistory[curConversation]) {
+          newHistory[realChatId] = newHistory[curConversation];
+          delete newHistory[curConversation];
+        }
+        return newHistory;
+      });
+      
+      // 更新当前conversation的key
+      setCurConversation(realChatId);
+      
+      // 记录已更新，避免重复更新
+      setUpdatedChatNames(prev => new Set(prev).add(curConversation));
+      
+    } catch (error) {
+      console.error('更新chat名称失败:', error);
+    }
+  };
 
   // 创建新对话的函数
   const createNewConversation = () => {
