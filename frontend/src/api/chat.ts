@@ -85,13 +85,6 @@ export function deleteChat(chatId: string): Promise<{ status: string }> {
 }
 
 /**
- * 创建新消息
- */
-export function createMessage(data: MessageCreate): Promise<MessageResponse> {
-    return post("/api/v1/chats/message", data) as unknown as Promise<MessageResponse>;
-}
-
-/**
  * 检查对话是否存在
  */
 export function checkChatExists(chatId: string): Promise<{ exists: boolean }> {
