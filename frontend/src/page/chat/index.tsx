@@ -280,6 +280,36 @@ const Independent: React.FC = () => {
         return newHistory;
       });
       
+      // 更新消息历史：将临时key的消息历史迁移到真实chatId
+      setMessageHistory(prevHistory => {
+        const newHistory = { ...prevHistory };
+        if (newHistory[curConversation]) {
+          newHistory[realChatId] = newHistory[curConversation];
+          delete newHistory[curConversation];
+        }
+        return newHistory;
+      });
+      
+      // 更新消息历史：将临时key的消息历史迁移到真实chatId
+      setMessageHistory(prevHistory => {
+        const newHistory = { ...prevHistory };
+        if (newHistory[curConversation]) {
+          newHistory[realChatId] = newHistory[curConversation];
+          delete newHistory[curConversation];
+        }
+        return newHistory;
+      });
+      
+      // 更新消息历史：将临时key的消息历史迁移到真实chatId
+      setMessageHistory(prevHistory => {
+        const newHistory = { ...prevHistory };
+        if (newHistory[curConversation]) {
+          newHistory[realChatId] = newHistory[curConversation];
+          delete newHistory[curConversation];
+        }
+        return newHistory;
+      });
+      
       // 更新当前conversation的key
       setCurConversation(realChatId);
       
