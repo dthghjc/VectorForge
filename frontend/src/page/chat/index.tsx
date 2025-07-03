@@ -29,14 +29,9 @@ import { useStreamingBackendAgent } from '../../hooks/useBackendAgentSimple';
 import { DEFAULT_CONVERSATIONS_ITEMS } from './data/conversations';
 import { HOT_TOPICS, DESIGN_GUIDE } from './data/prompts';
 import { SENDER_PROMPTS } from './data/senderPrompts';
-import { getChats, getChat, createChat } from '../../api/chat';
+import { getChats, getChat } from '../../api/chat';
 
 import cflpLogo from '../../assets/cflplogo.png';
-
-type BubbleDataType = {
-  role: string;
-  content: string;
-};
 
 // 根据时间判断分组
 const getTimeGroup = (dateStr: string): string => {
@@ -241,30 +236,20 @@ const Independent: React.FC = () => {
   }, []);
 
   // 创建新对话的函数
-  const createNewConversation = async () => {
-    try {
-      // 创建新对话
-      const newChat = await createChat({
-        title: `New Conversation ${conversations.length + 1}`,
-      });
-      
-      // 添加到对话列表
-      const newConversationItem = {
-        key: newChat.id,
-        label: newChat.title || `Conversation ${newChat.id.slice(0, 8)}`,
-        group: 'Today',
-      };
-      
-      setConversations([newConversationItem, ...conversations]);
-      setCurConversation(newChat.id);
-      setMessages([]);
-      setConversationId(newChat.id);
-      
-      message.success('创建新对话成功');
-    } catch (error) {
-      console.error('创建新对话失败:', error);
-      message.error('创建新对话失败');
-    }
+  const createNewConversation = () => {
+    // 前端创建临时对话，使用时间戳作为临时key
+    const now = dayjs().valueOf().toString();
+    const newConversationItem = {
+      key: now,
+      label: `New Conversation ${conversations.length + 1}`,
+      group: 'Today',
+    };
+    
+    // 添加到对话列表并切换到新对话
+    setConversations([newConversationItem, ...conversations]);
+    setCurConversation(now);
+    setMessages([]);
+    setConversationId(null); // 重置为null，等待后端创建
   };
 
   // ==================== Event ====================

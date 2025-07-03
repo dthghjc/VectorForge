@@ -85,13 +85,6 @@ export function deleteChat(chatId: string): Promise<{ status: string }> {
 }
 
 /**
- * 创建新对话
- */
-export function createChat(data: ChatCreate): Promise<ChatWithMessagesResponse> {
-    return post("/api/v1/chats/", data) as unknown as Promise<ChatWithMessagesResponse>;
-}
-
-/**
  * 创建新消息
  */
 export function createMessage(data: MessageCreate): Promise<MessageResponse> {
