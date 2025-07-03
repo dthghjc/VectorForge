@@ -195,27 +195,58 @@ const Independent: React.FC = () => {
   // 从后端加载对话列表
   const loadConversations = async () => {
     try {
-      setConversationsLoading(true);  // 设置加载状态为 true，表示正在加载对话列表
-      const chats = await getChats({ limit: 100 });  // 从后端获取对话列表
-      // 将后端返回的对话数据转换为组件需要的格式
+      setConversationsLoading(true);
+  
+      // 步骤 1 & 2: 从后端获取并转换对话数据
+      const chats = await getChats({ limit: 100 });
       const formattedConversations = chats.map(chat => ({
         key: chat.id,
         label: chat.title || `Conversation ${chat.id.slice(0, 8)}`,
         group: getTimeGroup(chat.created_at),
       }));
-      
-      setConversations(formattedConversations);  // 更新对话列表
-      
-      // 如果有对话，默认选中第一个
-      if (formattedConversations.length > 0 && !curConversation) {
-        const firstChat = formattedConversations[0];
-        setCurConversation(firstChat.key);
-        // 加载第一个对话的消息
-        await loadChatMessages(firstChat.key);
+  
+      // 关键逻辑：检查 sessionStorage，以避免刷新后重复创建
+      const savedTempChatJSON = sessionStorage.getItem('tempChat');
+  
+      if (savedTempChatJSON) {
+        // --- 如果存在已记录的临时Chat，则恢复它 ---
+        const tempChat = JSON.parse(savedTempChatJSON);
+        
+        // 更新对话列表（恢复的临时Chat + 历史列表）
+        setConversations([tempChat, ...formattedConversations]);
+        
+        // 激活这个已恢复的临时对话
+        setCurConversation(tempChat.key);
+        setMessages([]);
+        setConversationId("");
+  
+      } else {
+        // --- 如果不存在记录，则按步骤3和4创建全新的临时Chat ---
+        
+        // 步骤 3: 新建一个临时chat
+        const now = dayjs().valueOf().toString();
+        const newConversationItem = {
+          key: now,
+          label: `New Conversation`,
+          group: 'Today',
+        };
+        
+        // 步骤 4: 更新对话列表（新创建的临时Chat + 历史列表）
+        setConversations([newConversationItem, ...formattedConversations]);
+        
+        // 激活新创建的临时对话
+        setCurConversation(now);
+        setMessages([]);
+        setConversationId(null);
+        
+        // 同时，将这个新创建的临时Chat存入sessionStorage
+        sessionStorage.setItem('tempChat', JSON.stringify(newConversationItem));
       }
+  
     } catch (error) {
       console.error('加载对话列表失败:', error);
       message.error('加载对话列表失败');
+      // 可以在这里也加上创建新对话的降级处理
     } finally {
       setConversationsLoading(false);
     }
@@ -303,6 +334,9 @@ const Independent: React.FC = () => {
       
       // 记录已更新，避免重复更新（临时chat的key）
       setUpdatedChatNames(prev => new Set(prev).add(curConversation));
+
+      // 清理sessionStorage，完成临时对话的生命周期
+      sessionStorage.removeItem('tempChat');
       
     } catch (error) {
       console.error('更新chat名称失败:', error);
@@ -335,7 +369,7 @@ const Independent: React.FC = () => {
       message.error('Request is in progress, please wait for the request to complete.');
       return;
     }
-
+    console.log('发送消息时，conversationId 的值为:', conversationId); 
     onRequest({  // 调用 onRequest 函数，传入一个对象，包含两个属性：stream 和 message
       stream: true,
       message: { role: 'user', content: val },
