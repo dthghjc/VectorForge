@@ -29,6 +29,7 @@ import { useStreamingBackendAgent } from '../../hooks/useBackendAgentSimple';
 import { DEFAULT_CONVERSATIONS_ITEMS } from './data/conversations';
 import { HOT_TOPICS, DESIGN_GUIDE } from './data/prompts';
 import { SENDER_PROMPTS } from './data/senderPrompts';
+import { getChats, getChat, createChat } from '../../api/chat';
 
 import cflpLogo from '../../assets/cflplogo.png';
 
@@ -37,7 +38,20 @@ type BubbleDataType = {
   content: string;
 };
 
-
+// 根据时间判断分组
+const getTimeGroup = (dateStr: string): string => {
+  const messageDate = dayjs(dateStr);
+  const today = dayjs().startOf('day');
+  const yesterday = today.subtract(1, 'day');
+  
+  if (messageDate.isAfter(today)) {
+    return 'Today';
+  } else if (messageDate.isAfter(yesterday)) {
+    return 'Yesterday';
+  } else {
+    return 'Earlier';
+  }
+};
 
 const Independent: React.FC = () => {
   const [messageId, setMessageId] = useState<string | null>(null);
@@ -53,9 +67,12 @@ const Independent: React.FC = () => {
 
   // 会话列表（左栏）
   const [conversations, setConversations] = useState(DEFAULT_CONVERSATIONS_ITEMS);
+  // 加载状态
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [currentChatLoading, setCCurrentChatLoading] = useState(false);
 
   // 当前激活会话 key，决定右侧显示哪段聊天记录
-  const [curConversation, setCurConversation] = useState(DEFAULT_CONVERSATIONS_ITEMS[0].key);
+  const [curConversation, setCurConversation] = useState('');
   // 附件上传弹层开关 + 已选文件。由 Sender.Header 控制
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<GetProp<typeof Attachments, 'items'>>([]);
@@ -157,6 +174,99 @@ const Independent: React.FC = () => {
     },
   });
 
+  // 从后端加载对话列表
+  const loadConversations = async () => {
+    try {
+      setConversationsLoading(true);
+      const chats = await getChats({ limit: 100 });
+      
+      const formattedConversations = chats.map(chat => ({
+        key: chat.id,
+        label: chat.title || `Conversation ${chat.id.slice(0, 8)}`,
+        group: getTimeGroup(chat.created_at),
+      }));
+      
+      setConversations(formattedConversations);
+      
+      // 如果有对话，默认选中第一个
+      if (formattedConversations.length > 0 && !curConversation) {
+        const firstChat = formattedConversations[0];
+        setCurConversation(firstChat.key);
+        // 加载第一个对话的消息
+        await loadChatMessages(firstChat.key);
+      }
+    } catch (error) {
+      console.error('加载对话列表失败:', error);
+      message.error('加载对话列表失败');
+    } finally {
+      setConversationsLoading(false);
+    }
+  };
+
+  // 从后端加载指定对话的消息
+  const loadChatMessages = async (chatId: string) => {
+    try {
+      setCCurrentChatLoading(true);
+      const chatData = await getChat(chatId);
+      
+      // 转换消息格式以适配 XChat
+      const formattedMessages = chatData.messages.map((msg, index) => ({
+        id: msg.id,
+        message: {
+          role: msg.role,
+          content: msg.content,
+        },
+        status: 'local' as const,
+      }));
+      
+      // 更新消息历史和当前消息
+      setMessageHistory(prev => ({
+        ...prev,
+        [chatId]: formattedMessages,
+      }));
+      
+      setMessages(formattedMessages);
+      setConversationId(chatId);
+    } catch (error) {
+      console.error('加载对话消息失败:', error);
+      message.error('加载对话消息失败');
+    } finally {
+      setCCurrentChatLoading(false);
+    }
+  };
+
+  // 页面初始化时加载对话列表
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  // 创建新对话的函数
+  const createNewConversation = async () => {
+    try {
+      // 创建新对话
+      const newChat = await createChat({
+        title: `New Conversation ${conversations.length + 1}`,
+      });
+      
+      // 添加到对话列表
+      const newConversationItem = {
+        key: newChat.id,
+        label: newChat.title || `Conversation ${newChat.id.slice(0, 8)}`,
+        group: 'Today',
+      };
+      
+      setConversations([newConversationItem, ...conversations]);
+      setCurConversation(newChat.id);
+      setMessages([]);
+      setConversationId(newChat.id);
+      
+      message.success('创建新对话成功');
+    } catch (error) {
+      console.error('创建新对话失败:', error);
+      message.error('创建新对话失败');
+    }
+  };
+
   // ==================== Event ====================
   // 发送消息事件
   const onSubmit = (val: string) => {
@@ -192,20 +302,7 @@ const Independent: React.FC = () => {
 
       {/* 🌟 添加会话,向 conversations prepend 一个条目并切到新会话 */}
       <Button
-        onClick={() => {
-          const now = dayjs().valueOf().toString();
-          setConversations([
-            {
-              key: now,
-              label: `New Conversation ${conversations.length + 1}`,
-              group: 'Today',
-            },
-            ...conversations,
-          ]);
-          setCurConversation(now);
-          setMessages([]);
-          setConversationId("");
-        }}
+        onClick={createNewConversation}
         type="link"
         className="chat-add-btn"
         icon={<PlusOutlined />}
@@ -214,18 +311,31 @@ const Independent: React.FC = () => {
       </Button>
 
       {/* 🌟 会话管理 */}
-      <Conversations
-        items={conversations}
-        className="chat-conversations"
-        activeKey={curConversation}
-        onActiveChange={async (val) => {
+      {conversationsLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <Spin size="default" />
+        </div>
+      ) : (
+        <Conversations
+          items={conversations}
+          className="chat-conversations"
+          activeKey={curConversation}
+          onActiveChange={async (val) => {
+          // 1. 中止当前可能正在进行的请求
           abortController.current?.abort();
-          // 取消请求时，会触发异步的 requestFallback，可能导致时间问题。
-          // 未来版本将添加 sessionId 能力来解决这个问题。
-          setTimeout(() => {
-            setCurConversation(val);
-            setMessages(messageHistory?.[val] || []);
-          }, 100);
+          
+          // 2. 设置当前会话并加载消息
+          setCurConversation(val);
+          
+          // 3. 从缓存或后端加载消息
+          if (messageHistory[val]) {
+            // 如果有缓存，直接使用
+            setMessages(messageHistory[val]);
+            setConversationId(val);
+          } else {
+            // 如果没有缓存，从后端加载
+            await loadChatMessages(val);
+          }
         }}
         groupable
         styles={{ item: { padding: '0 8px' } }}
@@ -259,13 +369,18 @@ const Independent: React.FC = () => {
           ],
         })}
       />
+      )}
     </div>
   );
   // 中部聊天记录
   const chatList = (
     <div className="chat-list">
-      {/* 三元运算符，如果 messages 有值，则显示消息列表，否则显示占位页 */}
-      {messages?.length ? (
+      {currentChatLoading ? (
+        /* 🌟 消息加载中 */
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <Spin size="large" />
+        </div>
+      ) : messages?.length ? (
         /* 🌟 消息列表 */
         <Bubble.List
           items={messages?.map((i, index) => ({
