@@ -49,31 +49,48 @@ const getTimeGroup = (dateStr: string): string => {
 };
 
 const Independent: React.FC = () => {
+  /*
+  messageId, conversationId, taskId: 用于存储从后端流式响应中收到的ID信息。
+  */
   const [messageId, setMessageId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
 
-  
+  /*
+  abortController: 用于管理网络请求的控制器。
+  useRef: 持久化的引用
+  作用: 当用户点击取消按钮时，调用 abortController.current.abort() 来中断当前正在进行的网络请求。
+  */
   const abortController = useRef<AbortController>(null);
 
-  // ==================== State ====================
-  // 保存各回话的历史消息
+  /*
+  客户端缓存。
+  键 (Key): 对话的ID (curConversation)。
+  值 (Value): 该对话的所有消息数组 (messages)。
+  作用: 当用户切换对话时，组件会先检查 messageHistory 中是否已经有这个对话的消息记录。
+  如果有，就直接从这里加载，避免了不必要的网络请求，大大提升了切换速度和用户体验。
+  这个缓存在 useEffect 中被持续更新。
+  */
   const [messageHistory, setMessageHistory] = useState<Record<string, any>>({});
 
-  // 会话列表（左栏）
+  // 左侧对话列表的数据源
   const [conversations, setConversations] = useState(DEFAULT_CONVERSATIONS_ITEMS);
-  // 加载状态
+  // 左侧列表的加载状态
   const [conversationsLoading, setConversationsLoading] = useState(true);
+  // 右侧当前对话的加载状态
   const [currentChatLoading, setCCurrentChatLoading] = useState(false);
-  // 记录已更新过名称的chat，避免重复更新
+  
+  // 一个 Set 集合，用来记录哪些临时对话的名称已经被更新过，以防止重复请求和更新。
   const [updatedChatNames, setUpdatedChatNames] = useState<Set<string>>(new Set());
 
   // 当前激活会话 key，决定右侧显示哪段聊天记录
   const [curConversation, setCurConversation] = useState('');
-  // 附件上传弹层开关 + 已选文件。由 Sender.Header 控制
+
+  // 控制附件上传弹窗的开关和已上传的文件列表。
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<GetProp<typeof Attachments, 'items'>>([]);
-  // 	文本框输入，	绑定 <Sender>
+
+  // 绑定到输入框 Sender 的当前输入值。
   const [inputValue, setInputValue] = useState('');
 
   // ==================== Runtime ====================
@@ -178,16 +195,16 @@ const Independent: React.FC = () => {
   // 从后端加载对话列表
   const loadConversations = async () => {
     try {
-      setConversationsLoading(true);
-      const chats = await getChats({ limit: 100 });
-      
+      setConversationsLoading(true);  // 设置加载状态为 true，表示正在加载对话列表
+      const chats = await getChats({ limit: 100 });  // 从后端获取对话列表
+      // 将后端返回的对话数据转换为组件需要的格式
       const formattedConversations = chats.map(chat => ({
         key: chat.id,
         label: chat.title || `Conversation ${chat.id.slice(0, 8)}`,
         group: getTimeGroup(chat.created_at),
       }));
       
-      setConversations(formattedConversations);
+      setConversations(formattedConversations);  // 更新对话列表
       
       // 如果有对话，默认选中第一个
       if (formattedConversations.length > 0 && !curConversation) {
@@ -208,9 +225,9 @@ const Independent: React.FC = () => {
   const loadChatMessages = async (chatId: string) => {
     try {
       setCCurrentChatLoading(true);
+      // 从后端获取指定对话的消息
       const chatData = await getChat(chatId);
-      
-      // 转换消息格式以适配 XChat
+      // 将后端返回的消息数据转换为组件需要的格式适配 XChat
       const formattedMessages = chatData.messages.map((msg, index) => ({
         id: msg.id,
         message: {
@@ -222,10 +239,11 @@ const Independent: React.FC = () => {
       
       // 更新消息历史和当前消息
       setMessageHistory(prev => ({
-        ...prev,
-        [chatId]: formattedMessages,
+        ...prev,  // 保留之前的所有对话消息
+        [chatId]: formattedMessages,  // 将当前对话的消息添加到 messageHistory 中
       }));
       
+      // 更新当前对话的消息列表和对话ID
       setMessages(formattedMessages);
       setConversationId(chatId);
     } catch (error) {
@@ -246,7 +264,7 @@ const Independent: React.FC = () => {
     return /^\d{13}$/.test(chatKey); // 13位时间戳
   };
 
-  // 更新chat名称（仅对临时chat且未更新过的进行更新）
+  // 更新chat名称（仅对临时chat且未更新过的进行更新），临时对话“转正”。
   const updateChatName = async (realChatId: string) => {
     // 如果当前conversation不是临时chat，或者已经更新过，则跳过
     if (!isTempChat(curConversation) || updatedChatNames.has(curConversation)) {
@@ -280,40 +298,10 @@ const Independent: React.FC = () => {
         return newHistory;
       });
       
-      // 更新消息历史：将临时key的消息历史迁移到真实chatId
-      setMessageHistory(prevHistory => {
-        const newHistory = { ...prevHistory };
-        if (newHistory[curConversation]) {
-          newHistory[realChatId] = newHistory[curConversation];
-          delete newHistory[curConversation];
-        }
-        return newHistory;
-      });
-      
-      // 更新消息历史：将临时key的消息历史迁移到真实chatId
-      setMessageHistory(prevHistory => {
-        const newHistory = { ...prevHistory };
-        if (newHistory[curConversation]) {
-          newHistory[realChatId] = newHistory[curConversation];
-          delete newHistory[curConversation];
-        }
-        return newHistory;
-      });
-      
-      // 更新消息历史：将临时key的消息历史迁移到真实chatId
-      setMessageHistory(prevHistory => {
-        const newHistory = { ...prevHistory };
-        if (newHistory[curConversation]) {
-          newHistory[realChatId] = newHistory[curConversation];
-          delete newHistory[curConversation];
-        }
-        return newHistory;
-      });
-      
-      // 更新当前conversation的key
+      // 更新当前对话的key
       setCurConversation(realChatId);
       
-      // 记录已更新，避免重复更新
+      // 记录已更新，避免重复更新（临时chat的key）
       setUpdatedChatNames(prev => new Set(prev).add(curConversation));
       
     } catch (error) {
