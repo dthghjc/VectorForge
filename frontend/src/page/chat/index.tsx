@@ -700,7 +700,7 @@ const Independent: React.FC = () => {
               placement: 'start',  // 助手消息显示在聊天气泡的左侧（或开始位置）
               messageRender: renderMarkdown,  // 设置消息的渲染方式为 renderMarkdown
               // 在助手消息下方显示一个页脚，包含四个 Button 组件：重载、复制、点赞和点踩
-              footer: (
+              footer: (message) => (
                 <div style={{ display: 'flex' }}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} />
                   <Button 
@@ -708,6 +708,7 @@ const Independent: React.FC = () => {
                     size="small"
                     icon={<CopyOutlined />}
                     onClick={() => {
+                      navigator.clipboard.writeText(message);
                       appMessage.success('复制成功');
                     }}
                   />
