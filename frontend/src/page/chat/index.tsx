@@ -888,7 +888,7 @@ const Independent: React.FC = () => {
         confirmLoading={renameLoading}
         okText="确认"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         <Input
           placeholder="请输入新的对话标题"
@@ -910,7 +910,7 @@ const Independent: React.FC = () => {
         okText="删除"
         cancelText="取消"
         okType="danger"
-        destroyOnClose
+        destroyOnHidden
       >
         <p>确定要删除对话 "{deletingChatTitle}" 吗？此操作不可撤销。</p>
       </Modal>
