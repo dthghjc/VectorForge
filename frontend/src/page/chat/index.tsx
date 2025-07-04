@@ -2,9 +2,11 @@ import {
   CloudUploadOutlined,
   CopyOutlined,
   DeleteOutlined,
+  DislikeFilled,
   DislikeOutlined,
   EditOutlined,
   EllipsisOutlined,
+  LikeFilled,
   LikeOutlined,
   PaperClipOutlined,
   PlusOutlined,
@@ -20,7 +22,7 @@ import {
   Welcome,
   useXChat,
 } from '@ant-design/x';
-import { Button, Flex, type GetProp, Space, Spin, message, Modal, Input } from 'antd';
+import { Button, Flex, type GetProp, Space, Spin, Modal, Input, App } from 'antd';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
@@ -32,6 +34,8 @@ import { SENDER_PROMPTS } from './data/senderPrompts';
 import { getChats, getChat, updateChat, deleteChat } from '../../api/chat';
 
 import cflpLogo from '../../assets/cflplogo.png';
+
+const { useApp } = App;
 
 // 根据时间判断分组
 const getTimeGroup = (dateStr: string): string => {
@@ -77,6 +81,8 @@ const simplePollForChat = async (chatId: string) => {
 };
 
 const Independent: React.FC = () => {
+  
+  const { message: appMessage } = useApp();
   /*
   messageId, conversationId, taskId: 用于存储从后端流式响应中收到的ID信息。
   */
@@ -287,7 +293,7 @@ const Independent: React.FC = () => {
   
     } catch (error) {
       console.error('加载对话列表失败:', error);
-      message.error('加载对话列表失败');
+      appMessage.error('加载对话列表失败');
       // 可以在这里也加上创建新对话的降级处理
     } finally {
       setConversationsLoading(false);
@@ -320,8 +326,7 @@ const Independent: React.FC = () => {
       setMessages(formattedMessages);
       setConversationId(chatId);
     } catch (error) {
-      console.error('加载对话消息失败:', error);
-      message.error('加载对话消息失败');
+      appMessage.error('加载对话消息失败');
     } finally {
       setCCurrentChatLoading(false);
     }
@@ -341,7 +346,6 @@ const Independent: React.FC = () => {
   const updateChatName = async (realChatId: string) => {
     // 如果当前conversation不是临时chat，或者已经更新过，则跳过
     if (!isTempChat(curConversation) || updatedChatNames.has(curConversation)) {
-      console.log('updateChatName: 当前conversation不是临时chat，或者已经更新过，跳过');
       return;
     }
 
@@ -419,7 +423,7 @@ const Independent: React.FC = () => {
    */
   const handleRenameChat = async () => {
     if (!renameInputValue.trim()) {
-      message.error('对话标题不能为空');
+      appMessage.error('对话标题不能为空');
       return;
     }
 
@@ -438,12 +442,12 @@ const Independent: React.FC = () => {
         )
       );
       
-      message.success('重命名成功');
+      appMessage.success('重命名成功');
       setRenameModalVisible(false);
       
     } catch (error) {
       console.error('重命名对话失败:', error);
-      message.error('重命名失败，请重试');
+      appMessage.error('重命名失败，请重试');
     } finally {
       setRenameLoading(false);
     }
@@ -537,12 +541,11 @@ const Independent: React.FC = () => {
       // 步骤5：最后更新对话列表（确保状态切换完成后再更新列表）
       setConversations(newConversations);
       
-      message.success('删除成功');
+      appMessage.success('删除成功');
       setDeleteModalVisible(false);
       
     } catch (error) {
-      console.error('删除对话失败:', error);
-      message.error('删除失败，请重试');
+      appMessage.error('删除失败，请重试');
     } finally {
       setDeleteLoading(false);
     }
@@ -563,10 +566,9 @@ const Independent: React.FC = () => {
     if (!val) return;  // 如果输入值为空，则不发送
 
     if (loading) {  // 如果当前正在请求中，提示等待
-      message.error('Request is in progress, please wait for the request to complete.');
+      appMessage.error('Request is in progress, please wait for the request to complete.');
       return;
     }
-    console.log('发送消息时，conversationId 的值为:', conversationId); 
     onRequest({  // 调用 onRequest 函数，传入一个对象，包含两个属性：stream 和 message
       stream: true,
       message: { role: 'user', content: val },
@@ -701,7 +703,14 @@ const Independent: React.FC = () => {
               footer: (
                 <div style={{ display: 'flex' }}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} />
-                  <Button type="text" size="small" icon={<CopyOutlined />} />
+                  <Button 
+                    type="text"
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => {
+                      appMessage.success('复制成功');
+                    }}
+                  />
                   <Button type="text" size="small" icon={<LikeOutlined />} />
                   <Button type="text" size="small" icon={<DislikeOutlined />} />
                 </div>
