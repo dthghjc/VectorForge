@@ -446,22 +446,30 @@ const Independent: React.FC = () => {
           className="chat-conversations"
           activeKey={curConversation}
           onActiveChange={async (val) => {
-          // 1. 中止当前可能正在进行的请求
-          abortController.current?.abort();
+            // 1. 中止当前可能正在进行的请求
+            abortController.current?.abort();
+            
+            // 2. 设置当前会话并加载消息
+            setCurConversation(val);
+            
+            if (isTempChat(val)) {
+              // 如果点击的是一个临时会话
+              // 我们不需要从后端加载任何东西，只需要重置聊天界面即可
+              setMessages([]);
+              setConversationId(null); // 确保 conversationId 也被重置
           
-          // 2. 设置当前会话并加载消息
-          setCurConversation(val);
-          
-          // 3. 从缓存或后端加载消息
-          if (messageHistory[val]) {
-            // 如果有缓存，直接使用
-            setMessages(messageHistory[val]);
-            setConversationId(val);
-          } else {
-            // 如果没有缓存，从后端加载
-            await loadChatMessages(val);
-          }
-        }}
+            } else {
+              // 3. 从缓存或后端加载消息
+              if (messageHistory[val]) {
+                // 如果有缓存，直接使用
+                setMessages(messageHistory[val]);
+                setConversationId(val);
+              } else {
+                // 如果没有缓存，从后端加载
+                await loadChatMessages(val);
+              }
+            }
+          }}
         groupable
         styles={{ item: { padding: '0 8px' } }}
         // 每条会话右键菜单（Rename / Delete）
