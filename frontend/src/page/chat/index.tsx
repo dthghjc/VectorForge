@@ -48,6 +48,36 @@ const getTimeGroup = (dateStr: string): string => {
   }
 };
 
+/**
+ * 一个更简单的轮询函数，专门用于获取Chat详情
+ * @param chatId - 要获取的对话ID
+ * @returns 返回成功获取的对话数据
+ * @throws 如果超过最大次数仍失败，则抛出最后一个错误
+ */
+const simplePollForChat = async (chatId: string) => {
+  const maxRetries = 5;    // 最多尝试5次
+  const interval = 1000;  // 每次间隔1000毫秒
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      // 尝试获取数据，如果成功，会直接在这里返回，循环结束
+      return await getChat(chatId);
+    } catch (error) {
+      console.warn(`第 ${i + 1} 次尝试获取对话详情失败...`);
+      
+      // 如果已经是最后一次尝试，就直接把错误抛出去，不再等待
+      if (i === maxRetries - 1) {
+        throw error;
+      }
+      
+      // 等待指定间隔时间，然后进入下一次循环尝试
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+  // 如果因为某些原因循环结束了还没返回，也抛个错
+  throw new Error('轮询意外结束');
+};
+
 const Independent: React.FC = () => {
   /*
   messageId, conversationId, taskId: 用于存储从后端流式响应中收到的ID信息。
@@ -99,6 +129,8 @@ const Independent: React.FC = () => {
 
   // 用于全局按钮状态
   const loading = agent.isRequesting();
+
+  
 
   // 创建 XChat 实例，用于处理聊天逻辑
   // 绑定 agent，处理请求、消息流、消息转换等
@@ -237,7 +269,7 @@ const Independent: React.FC = () => {
         // 激活新创建的临时对话
         setCurConversation(now);
         setMessages([]);
-        setConversationId(null);
+        setConversationId("");
         
         // 同时，将这个新创建的临时Chat存入sessionStorage
         sessionStorage.setItem('tempChat', JSON.stringify(newConversationItem));
@@ -299,13 +331,15 @@ const Independent: React.FC = () => {
   const updateChatName = async (realChatId: string) => {
     // 如果当前conversation不是临时chat，或者已经更新过，则跳过
     if (!isTempChat(curConversation) || updatedChatNames.has(curConversation)) {
+      console.log('updateChatName: 当前conversation不是临时chat，或者已经更新过，跳过');
       return;
     }
 
     try {
       // 从后端获取chat详情来获取真实标题
-      const chatData = await getChat(realChatId);
-      
+      const chatData = await simplePollForChat(realChatId);
+      // 成功获取数据后，一次性更新所有UI状态
+      const realLabel = chatData.title || `Conversation ${realChatId.slice(0, 8)}`;
       // 更新conversations列表中对应项的key和label
       setConversations(prevConversations => 
         prevConversations.map(conv => 
@@ -349,7 +383,7 @@ const Independent: React.FC = () => {
     const now = dayjs().valueOf().toString();
     const newConversationItem = {
       key: now,
-      label: `New Conversation ${conversations.length + 1}`,
+      label: `New Conversation`,
       group: 'Today',
     };
     
@@ -357,7 +391,7 @@ const Independent: React.FC = () => {
     setConversations([newConversationItem, ...conversations]);
     setCurConversation(now);
     setMessages([]);
-    setConversationId(null); // 重置为null，等待后端创建
+    setConversationId(""); // 重置为null，等待后端创建
   };
 
   // ==================== Event ====================
