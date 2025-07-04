@@ -465,34 +465,42 @@ const Independent: React.FC = () => {
         groupable
         styles={{ item: { padding: '0 8px' } }}
         // 每条会话右键菜单（Rename / Delete）
-        menu={(conversation) => ({
-          items: [
-            {
-              label: 'Rename',
-              key: 'rename',
-              icon: <EditOutlined />,
-            },
-            {
-              label: 'Delete',
-              key: 'delete',
-              icon: <DeleteOutlined />,
-              danger: true,
-              onClick: () => {
-                const newList = conversations.filter((item) => item.key !== conversation.key);
-                const newKey = newList?.[0]?.key;
-                setConversations(newList);
-                // 删除操作会修改 curConversation 并触发 onActiveChange，所以需要延迟执行以确保在最后正确覆盖。
-                // 这个功能将在未来版本中修复。
-                setTimeout(() => {
-                  if (conversation.key === curConversation) {
-                    setCurConversation(newKey);
-                    setMessages(messageHistory?.[newKey] || []);
-                  }
-                }, 200);
+        // 临时会话不显示右键菜单
+        menu={(conversation) => {
+          // 如果是临时会话（时间戳格式的key），不显示菜单
+          if (isTempChat(conversation.key)) {
+            return undefined;
+          }
+          
+          return {
+            items: [
+              {
+                label: 'Rename',
+                key: 'rename',
+                icon: <EditOutlined />,
               },
-            },
-          ],
-        })}
+              {
+                label: 'Delete',
+                key: 'delete',
+                icon: <DeleteOutlined />,
+                danger: true,
+                onClick: () => {
+                  const newList = conversations.filter((item) => item.key !== conversation.key);
+                  const newKey = newList?.[0]?.key;
+                  setConversations(newList);
+                  // 删除操作会修改 curConversation 并触发 onActiveChange，所以需要延迟执行以确保在最后正确覆盖。
+                  // 这个功能将在未来版本中修复。
+                  setTimeout(() => {
+                    if (conversation.key === curConversation) {
+                      setCurConversation(newKey);
+                      setMessages(messageHistory?.[newKey] || []);
+                    }
+                  }, 200);
+                },
+              },
+            ],
+          };
+        }}
       />
       )}
     </div>
