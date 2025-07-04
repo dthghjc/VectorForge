@@ -20,7 +20,7 @@ import {
   Welcome,
   useXChat,
 } from '@ant-design/x';
-import { Button, Flex, type GetProp, Space, Spin, message } from 'antd';
+import { Button, Flex, type GetProp, Space, Spin, message, Modal, Input } from 'antd';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
@@ -29,7 +29,7 @@ import { useStreamingBackendAgent } from '../../hooks/useBackendAgentSimple';
 import { DEFAULT_CONVERSATIONS_ITEMS } from './data/conversations';
 import { HOT_TOPICS, DESIGN_GUIDE } from './data/prompts';
 import { SENDER_PROMPTS } from './data/senderPrompts';
-import { getChats, getChat } from '../../api/chat';
+import { getChats, getChat, updateChat, deleteChat } from '../../api/chat';
 
 import cflpLogo from '../../assets/cflplogo.png';
 
@@ -120,6 +120,18 @@ const Independent: React.FC = () => {
 
   // 绑定到输入框 Sender 的当前输入值。
   const [inputValue, setInputValue] = useState('');
+
+  // ==================== 重命名功能状态 ====================
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [renamingChatId, setRenamingChatId] = useState<string>('');
+  const [renameInputValue, setRenameInputValue] = useState('');
+
+  // ==================== 删除功能状态 ====================
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletingChatId, setDeletingChatId] = useState<string>('');
+  const [deletingChatTitle, setDeletingChatTitle] = useState<string>('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ==================== Runtime ====================
   // 使用自定义的后端Agent，连接VectorForge API
@@ -325,7 +337,7 @@ const Independent: React.FC = () => {
     return /^\d{13}$/.test(chatKey); // 13位时间戳
   };
 
-  // 更新chat名称（仅对临时chat且未更新过的进行更新），临时对话“转正”。
+  // 更新chat名称（仅对临时chat且未更新过的进行更新），临时对话"转正"。
   const updateChatName = async (realChatId: string) => {
     // 如果当前conversation不是临时chat，或者已经更新过，则跳过
     if (!isTempChat(curConversation) || updatedChatNames.has(curConversation)) {
@@ -392,6 +404,159 @@ const Independent: React.FC = () => {
     setConversationId(""); // 重置为null，等待后端创建
   };
 
+  // ==================== 重命名功能 ====================
+  /**
+   * 打开重命名对话框
+   */
+  const openRenameModal = (chatId: string, currentTitle: string) => {
+    setRenamingChatId(chatId);
+    setRenameInputValue(currentTitle);
+    setRenameModalVisible(true);
+  };
+
+  /**
+   * 执行重命名操作
+   */
+  const handleRenameChat = async () => {
+    if (!renameInputValue.trim()) {
+      message.error('对话标题不能为空');
+      return;
+    }
+
+    try {
+      setRenameLoading(true);
+      
+      // 调用后端API更新对话标题
+      await updateChat(renamingChatId, { title: renameInputValue.trim() });
+      
+      // 更新本地对话列表
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.key === renamingChatId 
+            ? { ...conv, label: renameInputValue.trim() }
+            : conv
+        )
+      );
+      
+      message.success('重命名成功');
+      setRenameModalVisible(false);
+      
+    } catch (error) {
+      console.error('重命名对话失败:', error);
+      message.error('重命名失败，请重试');
+    } finally {
+      setRenameLoading(false);
+    }
+  };
+
+  /**
+   * 取消重命名
+   */
+  const cancelRename = () => {
+    setRenameModalVisible(false);
+    setRenameInputValue('');
+    setRenamingChatId('');
+  };
+
+  // ==================== 删除功能 ====================
+  /**
+   * 打开删除确认对话框
+   */
+  const handleDeleteChat = (chatId: string, chatTitle: string) => {
+    setDeletingChatId(chatId);
+    setDeletingChatTitle(chatTitle);
+    setDeleteModalVisible(true);
+  };
+
+  /**
+   * 执行删除操作
+   */
+  const confirmDeleteChat = async () => {
+    try {
+      setDeleteLoading(true);
+      
+      // 步骤0：如果删除的是当前激活对话，中止可能正在进行的请求
+      if (deletingChatId === curConversation) {
+        abortController.current?.abort();
+      }
+      
+      // 步骤1：调用后端API删除对话
+      await deleteChat(deletingChatId);
+      
+      // 步骤2：从本地对话列表中移除
+      const newConversations = conversations.filter((item) => item.key !== deletingChatId);
+      
+      // 步骤3：清理本地消息历史
+      setMessageHistory(prev => {
+        const newHistory = { ...prev };
+        delete newHistory[deletingChatId];
+        return newHistory;
+      });
+      
+      // 步骤4：如果删除的是当前激活的对话，需要切换到其他对话
+      if (deletingChatId === curConversation) {
+        // 清理可能存在的临时对话记录
+        sessionStorage.removeItem('tempChat');
+        
+        // 查找第一个可用的对话
+        const firstAvailableChat = newConversations?.[0];
+        
+        if (firstAvailableChat) {
+          // 有其他对话可切换
+          if (isTempChat(firstAvailableChat.key)) {
+            // 切换到临时对话
+            setCurConversation(firstAvailableChat.key);
+            setMessages([]);
+            setConversationId("");
+            // 保存临时对话到 sessionStorage
+            sessionStorage.setItem('tempChat', JSON.stringify(firstAvailableChat));
+          } else {
+            // 切换到真实对话
+            setCurConversation(firstAvailableChat.key);
+            setConversationId(firstAvailableChat.key);
+            
+            // 使用当前消息历史检查缓存（排除刚删除的对话）
+            const currentMessageHistory = { ...messageHistory };
+            delete currentMessageHistory[deletingChatId];
+            
+            // 如果有缓存消息，直接使用
+            if (currentMessageHistory[firstAvailableChat.key]) {
+              setMessages(currentMessageHistory[firstAvailableChat.key]);
+            } else {
+              // 否则重新加载消息
+              setMessages([]);
+              loadChatMessages(firstAvailableChat.key);
+            }
+          }
+        } else {
+          // 没有其他对话了，创建新的临时对话
+          createNewConversation();
+        }
+      }
+      
+      // 步骤5：最后更新对话列表（确保状态切换完成后再更新列表）
+      setConversations(newConversations);
+      
+      message.success('删除成功');
+      setDeleteModalVisible(false);
+      
+    } catch (error) {
+      console.error('删除对话失败:', error);
+      message.error('删除失败，请重试');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  /**
+   * 取消删除
+   */
+  const cancelDeleteChat = () => {
+    setDeleteModalVisible(false);
+    setDeletingChatId('');
+    setDeletingChatTitle('');
+  };
+
   // ==================== Event ====================
   // 发送消息事件
   const onSubmit = (val: string) => {
@@ -456,7 +621,7 @@ const Independent: React.FC = () => {
               // 如果点击的是一个临时会话
               // 我们不需要从后端加载任何东西，只需要重置聊天界面即可
               setMessages([]);
-              setConversationId(null); // 确保 conversationId 也被重置
+              setConversationId(""); // 确保 conversationId 也被重置，使用空字符串保持一致性
           
             } else {
               // 3. 从缓存或后端加载消息
@@ -486,6 +651,9 @@ const Independent: React.FC = () => {
                 label: 'Rename',
                 key: 'rename',
                 icon: <EditOutlined />,
+                onClick: () => {
+                  openRenameModal(conversation.key, String(conversation.label || ''));
+                },
               },
               {
                 label: 'Delete',
@@ -493,17 +661,7 @@ const Independent: React.FC = () => {
                 icon: <DeleteOutlined />,
                 danger: true,
                 onClick: () => {
-                  const newList = conversations.filter((item) => item.key !== conversation.key);
-                  const newKey = newList?.[0]?.key;
-                  setConversations(newList);
-                  // 删除操作会修改 curConversation 并触发 onActiveChange，所以需要延迟执行以确保在最后正确覆盖。
-                  // 这个功能将在未来版本中修复。
-                  setTimeout(() => {
-                    if (conversation.key === curConversation) {
-                      setCurConversation(newKey);
-                      setMessages(messageHistory?.[newKey] || []);
-                    }
-                  }, 200);
+                  handleDeleteChat(conversation.key, String(conversation.label || ''));
                 },
               },
             ],
@@ -709,6 +867,42 @@ const Independent: React.FC = () => {
         {chatList}
         {chatSender}
       </div>
+
+      {/* 重命名对话模态框 */}
+      <Modal
+        title="重命名对话"
+        open={renameModalVisible}
+        onOk={handleRenameChat}
+        onCancel={cancelRename}
+        confirmLoading={renameLoading}
+        okText="确认"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Input
+          placeholder="请输入新的对话标题"
+          value={renameInputValue}
+          onChange={(e) => setRenameInputValue(e.target.value)}
+          onPressEnter={handleRenameChat}
+          maxLength={100}
+          showCount
+        />
+      </Modal>
+
+      {/* 删除对话模态框 */}
+      <Modal
+        title="确认删除对话"
+        open={deleteModalVisible}
+        onOk={confirmDeleteChat}
+        onCancel={cancelDeleteChat}
+        confirmLoading={deleteLoading}
+        okText="删除"
+        cancelText="取消"
+        okType="danger"
+        destroyOnClose
+      >
+        <p>确定要删除对话 "{deletingChatTitle}" 吗？此操作不可撤销。</p>
+      </Modal>
     </div>
   );
 };
