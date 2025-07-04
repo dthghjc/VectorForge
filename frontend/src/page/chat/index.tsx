@@ -651,7 +651,8 @@ const Independent: React.FC = () => {
                 label: 'Rename',
                 key: 'rename',
                 icon: <EditOutlined />,
-                onClick: () => {
+                onClick: (e) => {
+                  e?.domEvent?.stopPropagation(); // 阻止事件冒泡，避免触发onActiveChange
                   openRenameModal(conversation.key, String(conversation.label || ''));
                 },
               },
@@ -660,7 +661,8 @@ const Independent: React.FC = () => {
                 key: 'delete',
                 icon: <DeleteOutlined />,
                 danger: true,
-                onClick: () => {
+                onClick: (e) => {
+                  e?.domEvent?.stopPropagation(); // 阻止事件冒泡，避免触发onActiveChange
                   handleDeleteChat(conversation.key, String(conversation.label || ''));
                 },
               },
