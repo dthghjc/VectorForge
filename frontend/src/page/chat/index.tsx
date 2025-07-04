@@ -63,8 +63,6 @@ const simplePollForChat = async (chatId: string) => {
       // 尝试获取数据，如果成功，会直接在这里返回，循环结束
       return await getChat(chatId);
     } catch (error) {
-      console.warn(`第 ${i + 1} 次尝试获取对话详情失败...`);
-      
       // 如果已经是最后一次尝试，就直接把错误抛出去，不再等待
       if (i === maxRetries - 1) {
         throw error;

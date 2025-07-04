@@ -179,7 +179,7 @@ function NavLeft() {
         >
           <Dropdown
             menu={{ items: avatarMenu, onClick: onAvatarMenuClick }}
-            placement="topCenter"
+            placement="top"
           >
             <div
               style={{
