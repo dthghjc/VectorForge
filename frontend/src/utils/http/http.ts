@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosResponse } from "axios";
 import { message } from "antd";
-import { store } from "../../store";
+import { store, type RootState } from "../../store";
 
 const http: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -29,7 +29,7 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     
     // 只对需要认证的API处理token
     // 优先从Redux store获取token，如果没有则从sessionStorage获取
-    let token = store.getState().authSlice.token;
+    let token = (store.getState() as RootState).authSlice.token;
     
     // 如果Redux中没有token，尝试从sessionStorage获取
     if (!token) {
