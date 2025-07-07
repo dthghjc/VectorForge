@@ -342,6 +342,11 @@ const Independent: React.FC = () => {
     return /^\d{13}$/.test(chatKey); // 13位时间戳
   };
 
+  // 检查当前对话列表中是否存在临时chat
+  const hasTempChat = (): boolean => {
+    return conversations.some(conversation => isTempChat(conversation.key));
+  };
+
   // 更新chat名称（仅对临时chat且未更新过的进行更新），临时对话"转正"。
   const updateChatName = async (realChatId: string) => {
     // 如果当前conversation不是临时chat，或者已经更新过，则跳过
@@ -598,6 +603,8 @@ const Independent: React.FC = () => {
         type="link"
         className="chat-add-btn"
         icon={<PlusOutlined />}
+        disabled={hasTempChat()}
+        title={hasTempChat() ? "请先完成当前临时对话或删除它" : "创建新对话"}
       >
         New Conversation
       </Button>
@@ -702,7 +709,7 @@ const Independent: React.FC = () => {
               // 在助手消息下方显示一个页脚，包含四个 Button 组件：重载、复制、点赞和点踩
               footer: (message) => (
                 <div style={{ display: 'flex' }}>
-                  <Button type="text" size="small" icon={<ReloadOutlined />} />
+                  {/* <Button type="text" size="small" icon={<ReloadOutlined />} /> */}
                   <Button 
                     type="text"
                     size="small"
@@ -712,8 +719,8 @@ const Independent: React.FC = () => {
                       appMessage.success('复制成功');
                     }}
                   />
-                  <Button type="text" size="small" icon={<LikeOutlined />} />
-                  <Button type="text" size="small" icon={<DislikeOutlined />} />
+                  {/* <Button type="text" size="small" icon={<LikeOutlined />} />
+                  <Button type="text" size="small" icon={<DislikeOutlined />} /> */}
                 </div>
               ),
               loadingRender: () => <Spin size="small" />,  // 当消息状态为 loading 时，显示一个小的加载动画

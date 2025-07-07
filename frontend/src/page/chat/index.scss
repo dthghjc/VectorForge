@@ -38,6 +38,19 @@
   background: rgba(22, 119, 255, 0.06);
   border: 1px solid rgba(22, 119, 255, 0.2);
   height: 40px;
+
+  &:disabled {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    color: rgba(0, 0, 0, 0.25) !important;
+    cursor: not-allowed;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+      border: 1px solid rgba(0, 0, 0, 0.15) !important;
+      color: rgba(0, 0, 0, 0.25) !important;
+    }
+  }
 }
 
 .chat-conversations {
