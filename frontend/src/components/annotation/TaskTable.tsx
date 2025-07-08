@@ -25,6 +25,8 @@ interface TaskTableProps {
   onStatusFilterChange: (value: string) => void;
   /** 表格加载状态 */
   loading?: boolean;
+  /** 自定义样式 */
+  style?: React.CSSProperties;
 }
 
 /**
@@ -59,6 +61,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   statusFilter,
   onStatusFilterChange,
   loading = false,
+  style,
 }) => {
   /**
    * 表格列配置
@@ -140,7 +143,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   ];
 
   return (
-    <div className="task-table">
+    <div className="task-table" style={style}>
       {/* 表格头部工具栏 */}
       <div className="table-header" style={{ marginBottom: 16 }}>
         <Space size="middle">
