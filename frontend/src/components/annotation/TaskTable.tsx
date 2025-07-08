@@ -143,7 +143,16 @@ const TaskTable: React.FC<TaskTableProps> = ({
   ];
 
   return (
-    <div className="task-table" style={style}>
+    <div
+      className="task-table"
+      style={{
+        ...style,
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%', // 确保占满父容器宽度
+        boxSizing: 'border-box', // 确保 padding 包含在宽度内
+      }}
+    >
       {/* 表格头部工具栏 */}
       <div className="table-header" style={{ marginBottom: 16 }}>
         <Space size="middle">
@@ -186,7 +195,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           showTotal: (total, range) =>
             `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
         }}
-        scroll={{ x: 1200 }} // 设置最小宽度，超出时显示横向滚动条
+        scroll={{ x: 'max-content' }} // 修改：使用 max-content 自适应内容宽度，而不是固定 900px
         size="middle" // 中等大小的表格行高
       />
     </div>

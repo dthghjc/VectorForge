@@ -24,15 +24,11 @@ const contentStyle: React.CSSProperties = {
   textAlign: 'center',
   color: '#000',
   backgroundColor: '#fff',
-  flex: 1, // 关键：让 Content 填充其父容器（Layout）的剩余垂直空间
-  display: 'flex', // 关键：将 Content 内部设置为 Flex 容器
-  flexDirection: 'column', // 关键：Content 内部的子元素垂直排列
-  justifyContent: 'center', // 垂直居中内容
-  alignItems: 'center', // 水平居中内容
-  paddingTop: '10px',
-  paddingBottom: '10px',
-  paddingLeft: '10px',
-  paddingRight: '10px',
+  flex: 1, // 保留此项，使 Content 区域能填充 Header 和 Footer 之间的垂直空间
+  // 移除 display: 'flex' 和其他 flex 属性，让它回归到普通的块级容器
+  // 我们直接在这里设置内边距，为表格提供呼吸空间
+  flexDirection: 'column',
+  padding: '24px',
 };
 
 const footerStyle: React.CSSProperties = {
@@ -41,14 +37,16 @@ const footerStyle: React.CSSProperties = {
   backgroundColor: '#fff',
 };
 
-// 修改 layoutStyle：移除宽度限制，并设置全屏宽高
+// 修改 layoutStyle：使用 100% 宽度而不是 100vw，避免超出视口导致右侧被切掉
 const layoutStyle: React.CSSProperties = {
   borderRadius: 8,
   overflow: 'hidden',
-  width: '100vw', // 占据整个视口宽度
+  width: '100%', // 修改：使用 100% 而不是 100vw，避免超出父容器
   height: '100vh', // 占据整个视口高度
   display: 'flex', // 关键：将 Layout 自身设置为 Flex 容器
   flexDirection: 'column', // 关键：Header, Content, Footer 垂直排列
+  maxWidth: '100vw', // 添加：确保不超过视口宽度
+  boxSizing: 'border-box', // 添加：确保 padding 和 border 包含在宽度内
 };
 
 /**
@@ -208,7 +206,7 @@ function Annotation() {
             onSearchChange={setSearchText}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
-            style={{ width: '90%', height: '90%'}}
+            style={{ width: '100%' }}
           />
         </Content>
         {/* 页面底部 */}
