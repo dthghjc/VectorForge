@@ -203,7 +203,7 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
         title="LLM回复标注" 
         style={{ marginTop: 12, backgroundColor: '#FAFAFA' }}
       >
-        <Row gutter={[16, 16]}>
+        <Row gutter={[12, 12]}>
           {/* 相关性评估 */}
           <Col span={12}>
             <div>
@@ -344,7 +344,7 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
                     </div>
                   </div>
                   
-                  <Row gutter={[16, 16]}>
+                  <Row gutter={[12, 12]}>
                     {/* 与用户问题的相关性 */}
                     <Col span={12}>
                       <div>
@@ -440,7 +440,7 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
       onCancel={onClose}
       width="calc(100vw - 80px)" // 响应式宽度
       style={{ top: 20 }}
-      bodyStyle={{ height: 'calc(100vh - 200px)', overflow: 'auto' }} // 固定高度，内容可滚动
+      styles={{ body: { height: 'calc(100vh - 200px)', overflow: 'auto' } }} // 固定高度，内容可滚动
       footer={
         // 自定义底部按钮区域
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -478,12 +478,13 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
         </div>
       }
     >
-      <Form form={form} layout="vertical">
-        <Row gutter={24}>
+      <div style={{ overflow: 'hidden' }}>
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
           {/* 左侧：对话内容与LLM回复标注 */}
           <Col span={16}>
             <Card title="对话内容与单轮LLM回复标注" style={{ height: '100%' }}>
-              <div style={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
+              <div style={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
                 {currentTask.dialogue.map((turn) => (
                   <div key={turn.id} style={{ marginBottom: 24 }}>
                     {/* 对话内容显示 */}
@@ -509,7 +510,7 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
           {/* 右侧：整体对话评估 */}
           <Col span={8}>
             <Card title="整体对话评估" style={{ height: '100%' }}>
-              <div style={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
+              <div style={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
                 <Row gutter={[0, 24]}>
                   {/* 对话意图分类 */}
                   <Col span={24}>
@@ -574,8 +575,9 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
               </div>
             </Card>
           </Col>
-        </Row>
-      </Form>
+                  </Row>
+        </Form>
+      </div>
     </Modal>
   );
 };

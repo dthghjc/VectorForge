@@ -210,7 +210,7 @@ function Annotation() {
           />
         </Content>
         {/* 页面底部 */}
-        <Footer style={footerStyle}>Footer</Footer>
+        <Footer style={footerStyle}>VectorForge</Footer>
         
         {/* 标注工作模态框 */}
         <AnnotationModal
