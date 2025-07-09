@@ -31,6 +31,28 @@ export const mockTasks: AnnotationTask[] = [
           violationDetails: '',
           improvementSuggestion: ''
         }
+      },
+      {
+        id: 'turn-001-3',
+        role: 'user',
+        content: '你叫什么名字？'
+      },
+      {
+        id: 'turn-001-4',
+        role: 'llm',
+        content: '我是一个AI助手，没有名字。',
+        llmResponse: {
+          id: 'resp-001-1',
+          content: '很抱歉，我无法获取实时天气信息。建议您查看当地天气预报应用或网站获取准确的天气信息。',
+          relevance: '',
+          fluency: '',
+          hasHallucination: false,
+          hallucinationDetails: '',
+          compliance: '',
+          violationTypes: [],
+          violationDetails: '',
+          improvementSuggestion: ''
+        }
       }
     ],
     intentCategory: '',

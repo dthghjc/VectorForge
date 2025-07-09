@@ -483,8 +483,8 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
           <Row gutter={16}>
           {/* 左侧：对话内容与LLM回复标注 */}
           <Col span={16}>
-            <Card title="对话内容与单轮LLM回复标注" style={{ height: '100%' }}>
-              <div style={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
+            <Card title="对话内容与单轮LLM回复标注" style={{ height: 'calc(100vh - 300px)' }}>
+              <div style={{ height: 'calc(100vh - 360px)', overflow: 'auto' }}>
                 {currentTask.dialogue.map((turn) => (
                   <div key={turn.id} style={{ marginBottom: 24 }}>
                     {/* 对话内容显示 */}
@@ -509,8 +509,8 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
           
           {/* 右侧：整体对话评估 */}
           <Col span={8}>
-            <Card title="整体对话评估" style={{ height: '100%' }}>
-              <div style={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
+            <Card title="整体对话评估" style={{ height: 'calc(100vh - 300px)' }}>
+              <div style={{ height: 'calc(100vh - 360px)', overflow: 'auto' }}>
                 <Row gutter={[0, 24]}>
                   {/* 对话意图分类 */}
                   <Col span={24}>

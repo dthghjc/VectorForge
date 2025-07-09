@@ -93,12 +93,12 @@ const TaskTable: React.FC<TaskTableProps> = ({
         </Tag>
       ),
     },
-    // {
-    //   title: 'LLM模型',
-    //   dataIndex: 'llmModel',
-    //   key: 'llmModel',
-    //   width: 100,
-    // },
+    {
+      title: 'LLM模型',
+      dataIndex: 'llmModel',
+      key: 'llmModel',
+      width: 100,
+    },
     {
       title: 'RAG启用',
       dataIndex: 'ragEnabled',
