@@ -51,6 +51,18 @@ export interface LLMResponse {
     violationTypes: string[];
     /** 违规情况详细描述 */
     violationDetails: string;
+    /** 是否进行指令遵循评估 */
+    isInstructionFollowing: boolean;
+    /** 指令遵循总体遵循度
+     * PERFECT_COMPLIANCE: 完美遵循
+     * NEAR_PERFECT: 高度遵循，仅有细微瑕疵
+     * PARTIAL_COMPLIANCE: 部分遵循，有明显遗漏或偏差
+     * MINIMAL_COMPLIANCE: 最小遵循，仅遵循部分关键指令
+     * NO_COMPLIANCE: 基本未遵循指令
+     */
+    instructionFollowingRating: 'PERFECT_COMPLIANCE' | 'NEAR_PERFECT' | 'PARTIAL_COMPLIANCE' | 'MINIMAL_COMPLIANCE' | 'NO_COMPLIANCE' | '';
+    /** 指令遵循评估详细描述 */
+    instructionFollowingDetails: string;
     /** 是否存在幻觉或事实错误 */
     hasHallucination: boolean;
     /** 幻觉或事实错误的详细描述 */

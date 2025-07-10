@@ -338,6 +338,42 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
             </div>
           </Col>
 
+          {/* 指令遵循评估 */}
+          <Col span={24}>
+            <div>
+              <Checkbox
+                checked={response.isInstructionFollowing}
+                onChange={(e) => handleLLMResponseChange(turn.id, 'isInstructionFollowing', e.target.checked)}
+              >
+                <Text strong>指令遵循评估</Text>
+              </Checkbox>
+              {/* 条件显示指令遵循评估 */}
+              {response.isInstructionFollowing && (
+                <Radio.Group
+                  value={response.instructionFollowingRating}
+                  onChange={(e) => handleLLMResponseChange(turn.id, 'instructionFollowingRating', e.target.value)}
+                  style={{ marginTop: 8, display: 'block' }}
+                >
+                  <Radio value="PERFECT_COMPLIANCE">完美遵循</Radio>
+                  <Radio value="NEAR_PERFECT">高度遵循</Radio>
+                  <Radio value="PARTIAL_COMPLIANCE">部分遵循</Radio>
+                  <Radio value="MINIMAL_COMPLIANCE">最小遵循</Radio>
+                  <Radio value="NO_COMPLIANCE">不遵循</Radio>
+                </Radio.Group>
+              )}
+              {/* 条件显示指令遵循评估详细描述 */}
+              {response.isInstructionFollowing && (
+                <TextArea
+                  placeholder="请详细描述指令遵循评估"
+                  value={response.instructionFollowingDetails}
+                  onChange={(e) => handleLLMResponseChange(turn.id, 'instructionFollowingDetails', e.target.value)}
+                  style={{ marginTop: 8 }}
+                  rows={2}
+                />
+              )}
+            </div>
+          </Col>
+          
           {/* 改进建议 */}
           <Col span={24}>
             <div>
