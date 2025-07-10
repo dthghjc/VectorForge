@@ -41,18 +41,24 @@ export interface LLMResponse {
     relevance: 'strong' | 'relevant' | 'weak' | 'irrelevant' | '';
     /** 回复的流畅性评级 */
     fluency: 'very_fluent' | 'fluent' | 'not_fluent' | '';
-    /** 是否存在幻觉或事实错误 */
-    hasHallucination: boolean;
-    /** 幻觉或事实错误的详细描述 */
-    hallucinationDetails: string;
+    /** 语气与风格 */
+    toneAndStyle: string[];
+    /** 信息准确性 */
+    accuracy: 'accurate' | 'partially_accurate' | 'inaccurate' | 'unknown' | '';
     /** 内容合规性评估 */
     compliance: 'compliant' | 'risky' | 'violation' | 'unknown' | '';
     /** 违规类型列表 */
     violationTypes: string[];
     /** 违规情况详细描述 */
     violationDetails: string;
+    /** 是否存在幻觉或事实错误 */
+    hasHallucination: boolean;
+    /** 幻觉或事实错误的详细描述 */
+    hallucinationDetails: string;
     /** 改进建议 */
     improvementSuggestion: string;
+    /** 优化重写 */
+    rewrite: string;
     /** 关联的RAG召回知识片段(可选) */
     ragRecalls?: RAGRecall[];
 }

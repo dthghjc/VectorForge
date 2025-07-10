@@ -236,33 +236,45 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
               </Radio.Group>
             </div>
           </Col>
-          
-          {/* 幻觉/事实错误检测 */}
-          <Col span={24}>
+
+          {/* 信息准确性 */}
+          <Col span={12}>
             <div>
-              <Checkbox
-                checked={response.hasHallucination}
-                onChange={(e) => handleLLMResponseChange(turn.id, 'hasHallucination', e.target.checked)}
+              <Text strong>信息准确性:</Text>
+              <Radio.Group
+                value={response.accuracy}
+                onChange={(e) => handleLLMResponseChange(turn.id, 'accuracy', e.target.value)}
+                style={{ marginTop: 8, display: 'block' }}
               >
-                <Text strong>幻觉/事实错误</Text>
-              </Checkbox>
-              {/* 条件显示幻觉详情输入框 */}
-              {response.hasHallucination && (
-                <TextArea
-                  placeholder="请详细描述幻觉或事实错误"
-                  value={response.hallucinationDetails}
-                  onChange={(e) => handleLLMResponseChange(turn.id, 'hallucinationDetails', e.target.value)}
-                  style={{ marginTop: 8 }}
-                  rows={2}
-                />
-              )}
+                <Radio value="accurate">准确</Radio>
+                <Radio value="partially_accurate">部分准确</Radio>
+                <Radio value="inaccurate">不准确</Radio>
+                <Radio value="unknown">无法判断</Radio>
+              </Radio.Group>
             </div>
           </Col>
-          
+
+          {/* 语气与风格 */}
+          <Col span={12}>
+            <div>
+              <Text strong>语气与风格:</Text>
+              <Checkbox.Group
+                value={response.toneAndStyle}
+                onChange={(values) => handleLLMResponseChange(turn.id, 'toneAndStyle', values)}
+                style={{ marginTop: 8, display: 'block' }}
+              >
+                <Checkbox value="professional_and_Rigorous">专业严谨</Checkbox>
+                <Checkbox value="Friendly_and_Enthusiastic">友好热情</Checkbox>
+                <Checkbox value="Efficient_and_Practical">清晰易懂</Checkbox>
+                <Checkbox value="Clear_and_Understandable">高效实用</Checkbox>
+              </Checkbox.Group>
+            </div>
+          </Col>
+
           {/* 内容合规性评估 */}
           <Col span={24}>
             <div>
-              <Text strong>内容合规性 (中国法规):</Text>
+              <Text strong>内容合规性:</Text>
               <Radio.Group
                 value={response.compliance}
                 onChange={(e) => handleLLMResponseChange(turn.id, 'compliance', e.target.value)}
@@ -304,6 +316,28 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
             </div>
           </Col>
           
+          {/* 幻觉/事实错误检测 */}
+          <Col span={24}>
+            <div>
+              <Checkbox
+                checked={response.hasHallucination}
+                onChange={(e) => handleLLMResponseChange(turn.id, 'hasHallucination', e.target.checked)}
+              >
+                <Text strong>幻觉/事实错误</Text>
+              </Checkbox>
+              {/* 条件显示幻觉详情输入框 */}
+              {response.hasHallucination && (
+                <TextArea
+                  placeholder="请详细描述幻觉或事实错误"
+                  value={response.hallucinationDetails}
+                  onChange={(e) => handleLLMResponseChange(turn.id, 'hallucinationDetails', e.target.value)}
+                  style={{ marginTop: 8 }}
+                  rows={2}
+                />
+              )}
+            </div>
+          </Col>
+
           {/* 改进建议 */}
           <Col span={24}>
             <div>
@@ -312,6 +346,20 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
                 placeholder="请提供改进建议"
                 value={response.improvementSuggestion}
                 onChange={(e) => handleLLMResponseChange(turn.id, 'improvementSuggestion', e.target.value)}
+                style={{ marginTop: 8 }}
+                rows={2}
+              />
+            </div>
+          </Col>
+
+          {/* 优化重写 */}
+          <Col span={24}>
+            <div>
+              <Text strong>优化重写:</Text>
+              <TextArea
+                placeholder="请直接撰写“完美回复”"
+                value={response.rewrite}
+                onChange={(e) => handleLLMResponseChange(turn.id, 'rewrite', e.target.value)}
                 style={{ marginTop: 8 }}
                 rows={2}
               />
@@ -561,7 +609,7 @@ const AnnotationModal: React.FC<AnnotationModalProps> = ({
                   {/* 一般备注 */}
                   <Col span={24}>
                     <div>
-                      <Text strong>一般备注:</Text>
+                      <Text strong>备注:</Text>
                       <TextArea
                         placeholder="请填写一般备注"
                         value={currentTask.generalNotes}
