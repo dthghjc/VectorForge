@@ -81,3 +81,6 @@ class MessageAudit(Base, TimestampMixin):
     # 关系映射
     annotator = relationship("User", back_populates="audit_records")
     message = relationship("Message", back_populates="audits")
+    
+    # 测试新增字段
+    test_field = Column(String(20), nullable=True, comment="测试字段")

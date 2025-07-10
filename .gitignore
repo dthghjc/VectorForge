@@ -7,8 +7,6 @@
 *.sqlite3
 *.db
 
-/backend/alembic/versions/
-
 # ───── Secrets & Env ─────
 **/.env
 **/.env.*
