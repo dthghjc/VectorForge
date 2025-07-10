@@ -180,7 +180,7 @@ class Settings(BaseSettings):
     
     # ========== 日志配置 ==========
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO", 
+        default="WARNING", 
         description="日志级别"
     )
     # KiraLays

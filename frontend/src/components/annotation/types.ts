@@ -45,7 +45,7 @@ export interface LLMResponse {
     hasHallucination: boolean;
     /** 幻觉或事实错误的详细描述 */
     hallucinationDetails: string;
-    /** 内容合规性评估(按中国法规) */
+    /** 内容合规性评估 */
     compliance: 'compliant' | 'risky' | 'violation' | 'unknown' | '';
     /** 违规类型列表 */
     violationTypes: string[];

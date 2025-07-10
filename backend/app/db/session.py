@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import DatabaseError
 from app.core.config import settings
@@ -30,7 +30,7 @@ for attempt in range(max_retries):
     try:
         # 只测试连接，不创建表
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         logger.info(f"Successfully connected to database on attempt {attempt + 1}")
         break
     except DatabaseError as e:
@@ -42,7 +42,7 @@ for attempt in range(max_retries):
             logger.error("Please ensure:")
             logger.error("1. Database service is running")
             logger.error("2. Database configuration in .env is correct")
-            logger.error("3. Run 'uv run python scripts/init_db.py' to initialize database")
+            logger.error("3. Run 'alembic upgrade head' to create or update database schema")
             # 不再抛出异常，让应用继续启动，但会在使用时报错
             break
 
@@ -64,9 +64,9 @@ def check_database_initialized():
         with engine.connect() as conn:
             # 检查是否存在用户表（作为数据库已初始化的标志）
             result = conn.execute(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = %s AND table_name = 'users'",
-                (settings.DB_NAME,)
+                text("SELECT COUNT(*) FROM information_schema.tables "
+                "WHERE table_schema = :db_name AND table_name = 'users'"),
+                {"db_name": settings.DB_NAME}
             )
             count = result.scalar()
             return count > 0
@@ -87,14 +87,14 @@ def get_database_status():
     try:
         # 测试连接
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
             status["connected"] = True
             
             # 检查表是否存在
             result = conn.execute(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = %s AND table_name IN ('users', 'chats', 'messages')",
-                (settings.DB_NAME,)
+                text("SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = :db_name AND table_name IN ('users', 'chats', 'messages')"),
+                {"db_name": settings.DB_NAME}
             )
             tables = [row[0] for row in result]
             
