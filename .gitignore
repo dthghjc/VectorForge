@@ -59,4 +59,3 @@ coverage/
 .cursor/
 .cursor-cache/
 .cursor-settings.json
-.env
