@@ -17,6 +17,7 @@ const headerStyle: React.CSSProperties = {
   paddingInline: 48,
   lineHeight: '64px',
   backgroundColor: '#fff',
+  borderBottom: '1px solid #fafafa', // 更浅的分隔线
 };
 
 // 修改 contentStyle：移除固定高度，使用 flex: 1 填充剩余空间
@@ -185,12 +186,12 @@ function Annotation() {
     <ConfigProvider theme={theme}>
       <Layout style={layoutStyle}>
         {/* 页面头部 */}
-        <Header style={headerStyle}>
-          <Space align="center">
+        <Header style={{ ...headerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 64 }}>
+          <Space align="center" style={{ display: 'flex', alignItems: 'center' }}>
             {/* 应用图标 */}
-            <FileTextOutlined style={{ fontSize: 24, color: '#00BFA5' }} />
+            <FileTextOutlined style={{ fontSize: 24, color: '#00BFA5', display: 'flex', alignItems: 'center' }} />
             {/* 应用标题 */}
-            <Title level={3} style={{ margin: 0, color: '#222222' }}>
+            <Title level={3} style={{ margin: 0, color: '#222222', lineHeight: 1 }}>
               LLM 对话标注系统
             </Title>
           </Space>
