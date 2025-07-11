@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ConfigProvider, Flex, Layout, Typography, Space } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
+import { TagOutlined } from '@ant-design/icons';
 import TaskTable from '../../components/annotation/TaskTable';
 import AnnotationModal from '../../components/annotation/AnnotationModal';
 import { mockTasks } from '../../data/mockData';
@@ -189,7 +189,7 @@ function Annotation() {
         <Header style={{ ...headerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 64 }}>
           <Space align="center" style={{ display: 'flex', alignItems: 'center' }}>
             {/* 应用图标 */}
-            <FileTextOutlined style={{ fontSize: 24, color: '#00BFA5', display: 'flex', alignItems: 'center' }} />
+            <TagOutlined style={{ fontSize: 24, color: '#00BFA5', display: 'flex', alignItems: 'center' }} />
             {/* 应用标题 */}
             <Title level={3} style={{ margin: 0, color: '#222222', lineHeight: 1 }}>
               LLM 对话标注系统
