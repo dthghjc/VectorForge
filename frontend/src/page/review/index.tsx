@@ -8,7 +8,7 @@ import { Layout, Space, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 // 自定义主题配置导入
 import { theme } from '../../components/annotation/theme';
-import Review1 from '../../components/review';
+import TaskManagement from '../../components/review/taskManagement';
 
 // 解构Typography组件
 const { Title } = Typography;
@@ -78,7 +78,7 @@ const items: TabsProps['items'] = [
     {
         key: '1',                          // 标签页唯一标识
         label: '标注任务管理',              // 标签页显示名称
-        children: <Review1 />, // 标签页内容（待替换为实际组件）
+        children: <TaskManagement />, // 标签页内容（待替换为实际组件）
     },
     {
         key: '2',                          // 标签页唯一标识
