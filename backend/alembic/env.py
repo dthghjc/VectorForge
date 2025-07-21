@@ -13,6 +13,7 @@ from app.models.base import Base
 # 导入所有模型以确保它们被注册到Base.metadata
 from app.models.user import User, MessageAudit
 from app.models.chat import Chat, Message
+from app.models.task import AnnotationTask, TaskChat, TaskLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -3,6 +3,29 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# 在所有其他导入之前设置日志配置
+import logging
+import os
+
+# 设置全局日志级别
+LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING")
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# 控制第三方库的日志级别
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+logging.getLogger("passlib").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("uvicorn").setLevel(logging.INFO)  # uvicorn基础日志保持INFO
+# logging.getLogger("uvicorn.access").setLevel(logging.WARNING)  # 移除这行，让访问日志正常显示
+
+# 应用程序模块的日志级别控制
+logging.getLogger("app.services").setLevel(logging.WARNING)  # 服务模块只显示警告
+logging.getLogger("app.db").setLevel(logging.INFO)  # 数据库连接状态还是要看到
+
 from app.api.v1.api import api_router
 from app.dify_api.v1.api import router as dify_router
 from app.core.config import settings

@@ -1,7 +1,7 @@
 import { get, post, del, patch } from "../utils/http/request";
 
 // ===== 消息相关类型 =====
-interface MessageResponse {
+export interface MessageResponse {
     id: string;
     chat_id: string;
     role: string;
@@ -21,7 +21,7 @@ interface MessageCreate {
 }
 
 // ===== 对话相关类型 =====
-interface ChatBasicResponse {
+export interface ChatBasicResponse {
     id: string;
     title?: string | null;
     user_id: string;
@@ -30,7 +30,7 @@ interface ChatBasicResponse {
     message_count: number;
 }
 
-interface ChatWithMessagesResponse {
+export interface ChatWithMessagesResponse {
     id: string;
     title?: string | null;
     user_id: string;

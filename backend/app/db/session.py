@@ -8,9 +8,15 @@ from app.models.chat import Chat, Message
 import logging
 import time
 
-# 设置日志
-logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
+# 移除重复的日志配置，现在在main.py中统一管理
+# logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
 logger = logging.getLogger(__name__)
+
+# 这些第三方库日志级别控制也移到main.py中了
+# logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+# logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+# logging.getLogger("passlib").setLevel(logging.WARNING)
+# logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # 创建数据库引擎，使用连接池配置
 engine = create_engine(
@@ -18,7 +24,7 @@ engine = create_engine(
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
-    echo=settings.DEBUG  # 开发环境显示 SQL 语句
+    echo=False  # 关闭SQL语句输出，避免大量INFO日志
 )
 
 # 添加重试逻辑用于数据库连接测试

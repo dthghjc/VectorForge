@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 import pytz
 import logging
 
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# 移除硬编码的日志配置，使用统一的设置
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MySQLClient:
     def __init__(self):

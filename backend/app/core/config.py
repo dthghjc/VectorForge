@@ -245,7 +245,9 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "development":
             self.DEBUG = True
             self.RELOAD = True
-            self.LOG_LEVEL = "DEBUG"
+            # 开发环境默认使用INFO级别，避免过多DEBUG信息
+            if not hasattr(self, 'LOG_LEVEL') or self.LOG_LEVEL == "WARNING":
+                self.LOG_LEVEL = "INFO"
         elif self.ENVIRONMENT == "production":
             self._validate_production_config()
     

@@ -6,6 +6,7 @@ from app.api.v1.chat.conversation import conversation_router
 from app.api.v1.chat.dify_proxy import router as dify_proxy_router
 from app.api.v1.audit.router import router as audit_router
 from app.api.v1.vectors.router import router as vectors_router
+from app.api.v1.task.router import router as task_router
 
 api_router = APIRouter()
 
@@ -15,6 +16,7 @@ api_router.include_router(chat_router, prefix="/chats", tags=["对话管理"])
 api_router.include_router(conversation_router, prefix="/chats", tags=["AI对话"])
 api_router.include_router(dify_proxy_router, prefix="/dify", tags=["Dify代理"])
 api_router.include_router(audit_router, prefix="/audit", tags=["审核标注"])
+api_router.include_router(task_router, prefix="/tasks", tags=["任务管理"])
 
 # Vector management APIs
 api_router.include_router(vectors_router, prefix="/vectors", tags=["向量管理"])
