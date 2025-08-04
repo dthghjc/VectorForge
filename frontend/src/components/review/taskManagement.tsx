@@ -409,50 +409,48 @@ const TaskManagement: React.FC = () => {
             <Title level={2}>任务管理</Title>
 
             {/* 统计卡片 */}
-            {stats && (
-                <Row gutter={16} style={{ marginBottom: '24px' }}>
-                    <Col span={6}>
-                        <Card>
-                            <Statistic
-                                title="总任务数"
-                                value={stats.total_tasks}
-                                prefix={<ExclamationCircleOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col span={6}>
-                        <Card>
-                            <Statistic
-                                title="进行中"
-                                value={stats.in_progress_tasks}
-                                prefix={<ClockCircleOutlined />}
-                                valueStyle={{ color: '#faad14' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col span={6}>
-                        <Card>
-                            <Statistic
-                                title="已完成"
-                                value={stats.completed_tasks}
-                                prefix={<CheckCircleOutlined />}
-                                valueStyle={{ color: '#52c41a' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col span={6}>
-                        <Card>
-                            <Statistic
-                                title="完成率"
-                                value={stats.overall_completion_rate}
-                                suffix="%"
-                                precision={1}
-                                valueStyle={{ color: '#1890ff' }}
-                            />
-                        </Card>
-                    </Col>
-                </Row>
-            )}
+            <Row gutter={16} style={{ marginBottom: '24px' }}>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="总任务数"
+                            value={stats?.total_tasks || 0}
+                            prefix={<ExclamationCircleOutlined />}
+                        />
+                    </Card>
+                </Col>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="进行中"
+                            value={stats?.in_progress_tasks || 0}
+                            prefix={<ClockCircleOutlined />}
+                            valueStyle={{ color: '#faad14' }}
+                        />
+                    </Card>
+                </Col>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="已完成"
+                            value={stats?.completed_tasks || 0}
+                            prefix={<CheckCircleOutlined />}
+                            valueStyle={{ color: '#52c41a' }}
+                        />
+                    </Card>
+                </Col>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="完成率"
+                            value={stats?.overall_completion_rate || 0}
+                            suffix="%"
+                            precision={1}
+                            valueStyle={{ color: '#1890ff' }}
+                        />
+                    </Card>
+                </Col>
+            </Row>
 
             {/* 任务列表 */}
             <Card
