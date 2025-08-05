@@ -1,675 +1,300 @@
-import React, { useState, useEffect } from 'react';
-import { 
-    Card, 
-    Button, 
-    Table, 
-    Modal, 
-    Form, 
-    Input, 
-    Select, 
-    DatePicker, 
-    message, 
-    Tabs, 
-    Statistic, 
-    Tag, 
-    Space,
-    Row,
-    Col,
-    Spin,
-    Typography,
-    Popconfirm,
-    Checkbox
-} from 'antd';
-import { 
-    PlusOutlined, 
-    EditOutlined, 
-    DeleteOutlined, 
-    UserOutlined,
-    ClockCircleOutlined,
-    CheckCircleOutlined,
-    ExclamationCircleOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { 
-    getAllUsers,
-    type UserBasic,
-    getTasks,
-    createTask,
-    assignTask,
-    deleteTask,
-    getTaskStats,
-    getPendingChats,
-    type TaskResponse,
-    type TaskCreate,
-    type TaskStats,
-    type PendingChat,
-    TaskStatus,
-    TaskPriority
-} from '../../api';
-import { getChats, type ChatBasicResponse } from '../../api/chat';
+/**
+ * 任务管理组件
+ * 用于管理对话标注任务，包括任务创建、分配、删除等功能
+ * 支持对话选择、标注员分配、任务统计等核心功能
+ * 
+ * 重构说明：
+ * - 使用useReducer管理复杂状态
+ * - 提取自定义Hook处理业务逻辑
+ * - 拆分为多个职责单一的子组件
+ * - 优化组件结构和可维护性
+ */
+import React, { useEffect, useCallback } from 'react';
+import { Typography, Form } from 'antd';
+// 导入任务相关的类型定义
+import { type TaskResponse, type TaskCreate } from '../../api';
+// 导入自定义Hook (从全局hooks文件夹)
+import { useTaskData } from '../../hooks/useTaskData';
+import { useTaskUI } from '../../hooks/useTaskUI';
+import { useTaskOperations } from '../../hooks/useTaskOperations';
+// 导入拆分后的子组件
+import TaskStatsComponent from './components/TaskStats';
+import TaskTable from './components/TaskTable';
+import CreateTaskModal from './modals/CreateTaskModal';
+import ChatSelectionModal from './modals/ChatSelectionModal';
+import AssignTaskModal from './modals/AssignTaskModal';
 
-const { Option } = Select;
-const { TextArea } = Input;
+// 从Ant Design组件中解构需要的子组件
 const { Title } = Typography;
-const { TabPane } = Tabs;
 
-// 状态颜色映射
-const statusColors = {
-    [TaskStatus.CREATED]: 'default',
-    [TaskStatus.ASSIGNED]: 'processing',
-    [TaskStatus.IN_PROGRESS]: 'warning',
-    [TaskStatus.COMPLETED]: 'success',
-    [TaskStatus.CANCELLED]: 'error',
-};
-
-// 优先级颜色映射
-const priorityColors = {
-    [TaskPriority.LOW]: 'default',
-    [TaskPriority.NORMAL]: 'blue',
-    [TaskPriority.HIGH]: 'orange',
-    [TaskPriority.URGENT]: 'red',
-};
-
+/**
+ * 任务管理主组件
+ * 提供任务的创建、分配、删除等完整功能
+ * 
+ * 重构后的组件使用自定义Hook管理状态，提高了代码的可维护性和可测试性
+ */
 const TaskManagement: React.FC = () => {
-    const [users, setUsers] = useState<UserBasic[]>([]);
-    const [tasks, setTasks] = useState<TaskResponse[]>([]);
-    const [stats, setStats] = useState<TaskStats | null>(null);
-    const [pendingChats, setPendingChats] = useState<PendingChat[]>([]);
-    const [allChats, setAllChats] = useState<ChatBasicResponse[]>([]);
-    const [selectedChats, setSelectedChats] = useState<string[]>([]);
-    const [chatSourceType, setChatSourceType] = useState<'pending' | 'all'>('pending');
-    
-    const [loading, setLoading] = useState(false);
-    const [createModalVisible, setCreateModalVisible] = useState(false);
-    const [chatModalVisible, setChatModalVisible] = useState(false);
-    const [assignModalVisible, setAssignModalVisible] = useState(false);
-    const [selectedTask, setSelectedTask] = useState<TaskResponse | null>(null);
-    
-    const [form] = Form.useForm();
-    const [assignForm] = Form.useForm();
+    // ==================== Hook状态管理 ====================
+    // 数据状态管理Hook
+    const {
+        dataState,
+        fetchUsers,
+        fetchTasks,
+        fetchStats,
+        fetchPendingChats,
+        fetchAllChats,
+    } = useTaskData();
 
-    // 获取标注员列表
-    const fetchUsers = async () => {
-        try {
-            const annotationUsers = await getAllUsers({
-                skip: 0,
-                limit: 100,
-                role: "annotation",
-                is_active: true
-            });
-            setUsers(annotationUsers);
-        } catch (error) {
-            console.error("获取用户失败:", error);
-            message.error("获取用户失败");
-        }
-    };
+    // UI状态管理Hook
+    const {
+        uiState,
+        setLoading,
+        toggleModal,
+        setSelectedChats,
+        setChatSourceType,
+        setSelectedTask,
+        resetSelection,
+    } = useTaskUI();
 
-    // 获取任务列表
-    const fetchTasks = async () => {
-        try {
-            setLoading(true);
-            const taskList = await getTasks();
-            setTasks(taskList);
-        } catch (error) {
-            console.error("获取任务失败:", error);
-            message.error("获取任务失败");
-        } finally {
-            setLoading(false);
-        }
-    };
+    // 任务操作Hook
+    const {
+        handleCreateTask,
+        handleAssignTask,
+        handleDeleteTask,
+    } = useTaskOperations();
 
-    // 获取任务统计
-    const fetchStats = async () => {
-        try {
-            const taskStats = await getTaskStats();
-            setStats(taskStats);
-        } catch (error) {
-            console.error("获取统计失败:", error);
-        }
-    };
+    // ==================== 表单实例 ====================
+    const [form] = Form.useForm();         // 创建任务表单实例
+    const [assignForm] = Form.useForm();   // 分配任务表单实例
 
-    // 获取待审核对话
-    const fetchPendingChats = async () => {
-        try {
-            const chats = await getPendingChats({ limit: 100 });
-            setPendingChats(chats);
-        } catch (error) {
-            console.error("获取待审核对话失败:", error);
-            message.error("获取待审核对话失败");
-        }
-    };
+    // ==================== 状态解构 ====================
+    const { users, tasks, stats, pendingChats, allChats } = dataState;
+    const { 
+        loading, 
+        modals: { create: createModalVisible, chat: chatModalVisible, assign: assignModalVisible },
+        selection: { chatIds: selectedChats, chatSourceType, task: selectedTask }
+    } = uiState;
 
-    // 获取所有对话
-    const fetchAllChats = async () => {
-        try {
-            const chats = await getChats({ limit: 200 });
-            setAllChats(chats);
-        } catch (error) {
-            console.error("获取对话列表失败:", error);
-            message.error("获取对话列表失败");
-        }
-    };
+    // ==================== 组件初始化 ====================
 
+    /**
+     * 组件初始化时获取必要数据
+     * 包括用户列表、任务列表、统计数据
+     */
     useEffect(() => {
-        fetchUsers();
-        fetchTasks();
-        fetchStats();
-    }, []);
+        fetchUsers();     // 获取标注员列表
+        fetchTasks();     // 获取任务列表
+        fetchStats();     // 获取统计数据
+    }, [fetchUsers, fetchTasks, fetchStats]);
 
-    // 创建任务
-    const handleCreateTask = async (values: any) => {
+    // ==================== 事件处理函数 ====================
+
+    /**
+     * 处理创建任务表单提交
+     * @param values 表单数据
+     */
+    const onCreateTask = async (values: any) => {
+        setLoading(true);
         try {
-            setLoading(true);
+            // 构造任务创建数据
             const taskData: TaskCreate = {
                 title: values.title,
                 description: values.description,
-                priority: values.priority || TaskPriority.NORMAL,
+                priority: values.priority || 'normal',
                 deadline: values.deadline ? values.deadline.toISOString() : undefined,
                 assigned_to_id: values.assigned_to_id,
                 chat_ids: selectedChats,
             };
             
-            await createTask(taskData);
-            message.success('任务创建成功');
-            setCreateModalVisible(false);
-            setSelectedChats([]);
-            form.resetFields();
-            fetchTasks();
-            fetchStats();
-        } catch (error) {
-            console.error("创建任务失败:", error);
-            message.error("创建任务失败");
+            await handleCreateTask(taskData, () => {
+                // 成功回调：重置UI状态和刷新数据
+                toggleModal('create', false);
+                resetSelection();
+                form.resetFields();
+                fetchTasks();
+                fetchStats();
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    // 分配任务
-    const handleAssignTask = async (values: any) => {
+    /**
+     * 处理任务分配表单提交
+     * @param values 表单数据，包含分配的用户ID
+     */
+    const onAssignTask = async (values: any) => {
         if (!selectedTask) return;
         
+        setLoading(true);
         try {
-            setLoading(true);
-            await assignTask(selectedTask.id, { assigned_to_id: values.assigned_to_id });
-            message.success('任务分配成功');
-            setAssignModalVisible(false);
-            setSelectedTask(null);
-            assignForm.resetFields();
-            fetchTasks();
-        } catch (error) {
-            console.error("分配任务失败:", error);
-            message.error("分配任务失败");
+            await handleAssignTask(selectedTask.id, { assigned_to_id: values.assigned_to_id }, () => {
+                // 成功回调：重置UI状态和刷新数据
+                toggleModal('assign', false);
+                setSelectedTask(null);
+                assignForm.resetFields();
+                fetchTasks();
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    // 删除任务
-    const handleDeleteTask = async (taskId: string) => {
+    /**
+     * 处理删除任务操作
+     * @param taskId 要删除的任务ID
+     */
+    const onDeleteTask = async (taskId: string) => {
+        setLoading(true);
         try {
-            setLoading(true);
-            await deleteTask(taskId);
-            message.success('任务删除成功');
-            fetchTasks();
-            fetchStats();
-        } catch (error) {
-            console.error("删除任务失败:", error);
-            message.error("删除任务失败");
+            await handleDeleteTask(taskId, () => {
+                // 成功回调：刷新数据
+                fetchTasks();
+                fetchStats();
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    // 选择对话
-    const handleSelectChats = () => {
+    /**
+     * 处理选择对话操作
+     * 根据对话来源类型获取相应的对话列表并显示选择弹窗
+     */
+    const onSelectChats = () => {
         if (chatSourceType === 'pending') {
-            fetchPendingChats();
+            fetchPendingChats();    // 获取待审核对话
         } else {
-            fetchAllChats();
+            fetchAllChats();        // 获取所有对话
         }
-        setChatModalVisible(true);
+        toggleModal('chat', true);
     };
 
-    // 任务表格列定义
-    const taskColumns = [
-        {
-            title: '任务标题',
-            dataIndex: 'title',
-            key: 'title',
-            render: (text: string, record: TaskResponse) => (
-                <div>
-                    <div style={{ fontWeight: 'bold' }}>{text}</div>
-                    {record.description && (
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                            {record.description}
-                        </div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            title: '状态',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status: string) => (
-                <Tag color={statusColors[status as TaskStatus]}>
-                    {status.toUpperCase()}
-                </Tag>
-            ),
-        },
-        {
-            title: '优先级',
-            dataIndex: 'priority',
-            key: 'priority',
-            render: (priority: string) => (
-                <Tag color={priorityColors[priority as TaskPriority]}>
-                    {priority.toUpperCase()}
-                </Tag>
-            ),
-        },
-        {
-            title: '进度',
-            key: 'progress',
-            render: (_: any, record: TaskResponse) => (
-                <div>
-                    <div>{record.completed_chats}/{record.total_chats}</div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                        {record.completion_rate}%
-                    </div>
-                </div>
-            ),
-        },
-        {
-            title: '分配给',
-            key: 'assigned_to',
-            render: (_: any, record: TaskResponse) => (
-                record.assigned_to ? (
-                    <span>
-                        <UserOutlined /> {record.assigned_to.username}
-                    </span>
-                ) : (
-                    <span style={{ color: '#999' }}>未分配</span>
-                )
-            ),
-        },
-        {
-            title: '截止时间',
-            dataIndex: 'deadline',
-            key: 'deadline',
-            render: (deadline: string, record: TaskResponse) => (
-                deadline ? (
-                    <span style={{ color: record.is_overdue ? '#ff4d4f' : undefined }}>
-                        <ClockCircleOutlined /> {dayjs(deadline).format('YYYY-MM-DD HH:mm')}
-                        {record.is_overdue && <Tag color="red">逾期</Tag>}
-                    </span>
-                ) : (
-                    <span style={{ color: '#999' }}>无限制</span>
-                )
-            ),
-        },
-        {
-            title: '操作',
-            key: 'actions',
-            render: (_: any, record: TaskResponse) => (
-                <Space>
-                    {!record.assigned_to_id && (
-                        <Button
-                            type="link"
-                            icon={<UserOutlined />}
-                            onClick={() => {
-                                setSelectedTask(record);
-                                setAssignModalVisible(true);
-                            }}
-                        >
-                            分配
-                        </Button>
-                    )}
-                    <Popconfirm
-                        title="确定删除这个任务吗？"
-                        onConfirm={() => handleDeleteTask(record.id)}
-                        okText="确定"
-                        cancelText="取消"
-                    >
-                        <Button
-                            type="link"
-                            danger
-                            icon={<DeleteOutlined />}
-                        >
-                            删除
-                        </Button>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+    // ==================== 任务操作回调函数 ====================
+    
+    /**
+     * 处理任务分配操作
+     * 使用useCallback缓存函数引用，避免子组件不必要的重渲染
+     */
+    const handleTaskAssign = useCallback((task: TaskResponse) => {
+        setSelectedTask(task);
+        toggleModal('assign', true);
+    }, [setSelectedTask, toggleModal]);
+    
+    /**
+     * 处理弹窗关闭操作
+     * 使用useCallback缓存函数引用
+     */
+    const handleCreateModalCancel = useCallback(() => {
+        toggleModal('create', false);
+        resetSelection();
+        form.resetFields();
+    }, [toggleModal, resetSelection, form]);
+    
+    const handleAssignModalCancel = useCallback(() => {
+        toggleModal('assign', false);
+        setSelectedTask(null);
+        assignForm.resetFields();
+    }, [toggleModal, setSelectedTask, assignForm]);
+    
+    /**
+     * 处理创建任务按钮点击
+     */
+    const handleCreateClick = useCallback(() => {
+        toggleModal('create', true);
+    }, [toggleModal]);
+    
+    /**
+     * 处理对话选择按钮点击
+     */
+    const handleSelectChats = useCallback(() => {
+        onSelectChats();
+    }, [onSelectChats]);
+    
+    /**
+     * 处理对话选择弹窗关闭
+     */
+    const handleChatModalCancel = useCallback(() => {
+        toggleModal('chat', false);
+    }, [toggleModal]);
+    
+    const handleChatModalOk = useCallback(() => {
+        toggleModal('chat', false);
+    }, [toggleModal]);
 
-    // 待审核对话表格列定义
-    const pendingChatColumns = [
-        {
-            title: '对话标题',
-            dataIndex: 'title',
-            key: 'title',
-            ellipsis: true,
-        },
-        {
-            title: '待审核消息数',
-            dataIndex: 'pending_message_count',
-            key: 'pending_message_count',
-            render: (count: number) => (
-                <Tag color="orange">{count} 条消息</Tag>
-            ),
-        },
-        {
-            title: '最后活动时间',
-            dataIndex: 'last_message_at',
-            key: 'last_message_at',
-            render: (time: string) => dayjs(time).format('YYYY-MM-DD HH:mm'),
-        },
-        {
-            title: '创建时间',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            render: (time: string) => dayjs(time).format('YYYY-MM-DD HH:mm'),
-        },
-    ];
-
-    // 所有对话表格列定义
-    const allChatColumns = [
-        {
-            title: '对话标题',
-            dataIndex: 'title',
-            key: 'title',
-            ellipsis: true,
-            render: (title: string) => title || '未命名对话',
-        },
-        {
-            title: '消息数量',
-            dataIndex: 'message_count',
-            key: 'message_count',
-            render: (count: number) => (
-                <Tag color="blue">{count} 条消息</Tag>
-            ),
-        },
-        {
-            title: '创建时间',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            render: (time: string) => dayjs(time).format('YYYY-MM-DD HH:mm'),
-        },
-        {
-            title: '更新时间',
-            dataIndex: 'updated_at',
-            key: 'updated_at',
-            render: (time: string) => dayjs(time).format('YYYY-MM-DD HH:mm'),
-        },
-    ];
-
+    // ==================== 组件渲染 ====================
+    
     return (
         <div style={{ padding: '24px' }}>
             <Title level={2}>任务管理</Title>
 
-            {/* 统计卡片 */}
-            <Row gutter={16} style={{ marginBottom: '24px' }}>
-                <Col span={6}>
-                    <Card>
-                        <Statistic
-                            title="总任务数"
-                            value={stats?.total_tasks || 0}
-                            prefix={<ExclamationCircleOutlined />}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card>
-                        <Statistic
-                            title="进行中"
-                            value={stats?.in_progress_tasks || 0}
-                            prefix={<ClockCircleOutlined />}
-                            valueStyle={{ color: '#faad14' }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card>
-                        <Statistic
-                            title="已完成"
-                            value={stats?.completed_tasks || 0}
-                            prefix={<CheckCircleOutlined />}
-                            valueStyle={{ color: '#52c41a' }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card>
-                        <Statistic
-                            title="完成率"
-                            value={stats?.overall_completion_rate || 0}
-                            suffix="%"
-                            precision={1}
-                            valueStyle={{ color: '#1890ff' }}
-                        />
-                    </Card>
-                </Col>
-            </Row>
+            {/* 任务统计组件 */}
+            <TaskStatsComponent stats={stats} />
 
-            {/* 任务列表 */}
-            <Card
-                title="任务列表"
-                extra={
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setCreateModalVisible(true)}
-                    >
-                        创建任务
-                    </Button>
-                }
-            >
-                <Table
-                    columns={taskColumns}
-                    dataSource={tasks}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{
-                        showSizeChanger: true,
-                        showQuickJumper: true,
-                        showTotal: (total) => `共 ${total} 条记录`,
-                    }}
-                />
-            </Card>
+            {/* 任务表格组件 */}
+            <TaskTable
+                tasks={tasks}
+                loading={loading}
+                onCreate={handleCreateClick}
+                onAssign={handleTaskAssign}
+                onDelete={onDeleteTask}
+            />
 
-            {/* 创建任务Modal */}
-            <Modal
-                title="创建新任务"
-                open={createModalVisible}
-                onCancel={() => {
-                    setCreateModalVisible(false);
-                    setSelectedChats([]);
-                    form.resetFields();
-                }}
-                footer={null}
-                width={800}
-            >
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleCreateTask}
-                >
-                    <Form.Item
-                        name="title"
-                        label="任务标题"
-                        rules={[{ required: true, message: '请输入任务标题' }]}
-                    >
-                        <Input placeholder="请输入任务标题" />
-                    </Form.Item>
+            {/* ==================== 弹窗组件 ==================== */}
+            
+            {/* 创建任务弹窗 */}
+            <CreateTaskModal
+                visible={createModalVisible}
+                loading={loading}
+                users={users}
+                chatSourceType={chatSourceType}
+                selectedChatsCount={selectedChats.length}
+                form={form}
+                onCancel={handleCreateModalCancel}
+                onSubmit={onCreateTask}
+                onChatSourceTypeChange={setChatSourceType}
+                onSelectChats={handleSelectChats}
+            />
 
-                    <Form.Item
-                        name="description"
-                        label="任务描述"
-                    >
-                        <TextArea rows={4} placeholder="请输入任务描述" />
-                    </Form.Item>
+            {/* 对话选择弹窗 */}
+            <ChatSelectionModal
+                visible={chatModalVisible}
+                chatSourceType={chatSourceType}
+                pendingChats={pendingChats}
+                allChats={allChats}
+                selectedChats={selectedChats}
+                onCancel={handleChatModalCancel}
+                onOk={handleChatModalOk}
+                onSelectionChange={setSelectedChats}
+            />
 
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item
-                                name="priority"
-                                label="优先级"
-                            >
-                                <Select placeholder="选择优先级">
-                                    <Option value={TaskPriority.LOW}>低</Option>
-                                    <Option value={TaskPriority.NORMAL}>普通</Option>
-                                    <Option value={TaskPriority.HIGH}>高</Option>
-                                    <Option value={TaskPriority.URGENT}>紧急</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item
-                                name="deadline"
-                                label="截止时间"
-                            >
-                                <DatePicker
-                                    showTime
-                                    style={{ width: '100%' }}
-                                    placeholder="选择截止时间"
-                                />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <Form.Item
-                        name="assigned_to_id"
-                        label="分配给"
-                    >
-                        <Select
-                            placeholder="选择标注员"
-                            allowClear
-                            showSearch
-                            filterOption={(input, option: any) =>
-                                option?.children?.toLowerCase().includes(input.toLowerCase())
-                            }
-                        >
-                            {users.map(user => (
-                                <Option key={user.id} value={user.id}>
-                                    {user.username}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item label="选择对话">
-                        <div style={{ marginBottom: '8px' }}>
-                            <Select
-                                value={chatSourceType}
-                                onChange={setChatSourceType}
-                                style={{ width: '200px', marginRight: '8px' }}
-                            >
-                                <Option value="pending">仅待审核对话</Option>
-                                <Option value="all">所有对话</Option>
-                            </Select>
-                            <Button onClick={handleSelectChats}>
-                                选择对话 ({selectedChats.length} 已选择)
-                            </Button>
-                        </div>
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Space>
-                            <Button type="primary" htmlType="submit" loading={loading}>
-                                创建任务
-                            </Button>
-                            <Button onClick={() => {
-                                setCreateModalVisible(false);
-                                setSelectedChats([]);
-                                form.resetFields();
-                            }}>
-                                取消
-                            </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
-
-            {/* 选择对话Modal */}
-            <Modal
-                title={chatSourceType === 'pending' ? "选择待审核对话" : "选择对话"}
-                open={chatModalVisible}
-                onCancel={() => setChatModalVisible(false)}
-                onOk={() => setChatModalVisible(false)}
-                width={1000}
-            >
-                <Table
-                    columns={chatSourceType === 'pending' ? pendingChatColumns : allChatColumns}
-                    dataSource={chatSourceType === 'pending' ? pendingChats : allChats as any}
-                    rowKey="id"
-                    rowSelection={{
-                        selectedRowKeys: selectedChats,
-                        onChange: (selectedRowKeys) => {
-                            setSelectedChats(selectedRowKeys as string[]);
-                        },
-                    }}
-                    pagination={{
-                        showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 个对话`,
-                    }}
-                />
-            </Modal>
-
-            {/* 分配任务Modal */}
-            <Modal
-                title="分配任务"
-                open={assignModalVisible}
-                onCancel={() => {
-                    setAssignModalVisible(false);
-                    setSelectedTask(null);
-                    assignForm.resetFields();
-                }}
-                footer={null}
-            >
-                <Form
-                    form={assignForm}
-                    layout="vertical"
-                    onFinish={handleAssignTask}
-                >
-                    <Form.Item
-                        name="assigned_to_id"
-                        label="分配给"
-                        rules={[{ required: true, message: '请选择标注员' }]}
-                    >
-                        <Select
-                            placeholder="选择标注员"
-                            showSearch
-                            filterOption={(input, option: any) =>
-                                option?.children?.toLowerCase().includes(input.toLowerCase())
-                            }
-                        >
-                            {users.map(user => (
-                                <Option key={user.id} value={user.id}>
-                                    {user.username}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Space>
-                            <Button type="primary" htmlType="submit" loading={loading}>
-                                分配任务
-                            </Button>
-                            <Button onClick={() => {
-                                setAssignModalVisible(false);
-                                setSelectedTask(null);
-                                assignForm.resetFields();
-                            }}>
-                                取消
-                            </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
+            {/* 分配任务弹窗 */}
+            <AssignTaskModal
+                visible={assignModalVisible}
+                loading={loading}
+                users={users}
+                form={assignForm}
+                onCancel={handleAssignModalCancel}
+                onSubmit={onAssignTask}
+            />
         </div>
     );
 };
 
+/**
+ * 导出任务管理组件
+ * 
+ * 主要功能：
+ * 1. 任务管理：创建、分配、删除任务
+ * 2. 对话选择：支持从待审核对话或全部对话中选择
+ * 3. 标注员管理：支持将任务分配给标注员
+ * 4. 统计展示：显示任务统计数据和完成情况
+ * 5. 进度跟踪：实时展示任务进度和完成率
+ * 
+ * 使用场景：
+ * - 管理员创建标注任务
+ * - 分配任务给标注员
+ * - 监控任务执行进度
+ * - 管理对话审核工作流
+ */
 export default TaskManagement;
