@@ -103,7 +103,9 @@ export const useTaskData = () => {
      */
     const fetchStats = useCallback(async () => {
         try {
+            // 1. 发起请求，等待数据返回。
             const taskStats = await getTaskStats();
+            // 2. 将数据更新到状态中。
             dataDispatch({ type: 'SET_STATS', payload: taskStats });
         } catch (error) {
             console.error("获取统计失败:", error);
