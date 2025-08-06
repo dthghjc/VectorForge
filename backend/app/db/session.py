@@ -24,6 +24,8 @@ engine = create_engine(
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
+    pool_pre_ping=True,  # 启用连接预检查，自动处理失效连接
+    pool_recycle=1800,  # 1800秒后回收连接，避免长时间连接超时
     echo=False  # 关闭SQL语句输出，避免大量INFO日志
 )
 

@@ -159,13 +159,33 @@ async def get_task_chats(
     
     task_chats = task_crud.get_task_chats(db, task_id, annotation_status)
     
+    # 如果没有task_chats，直接返回空列表
+    if not task_chats:
+        return task_chats
+    
+    # 一次性查询所有相关对话的消息数量，避免N+1查询
+    from sqlalchemy import func
+    chat_ids = [tc.chat_id for tc in task_chats if tc.chat_id]
+    
+    if chat_ids:
+        # 使用聚合查询一次性获取所有对话的消息数量
+        message_counts = dict(
+            db.query(
+                Message.chat_id,
+                func.count(Message.id).label('message_count')
+            ).filter(
+                Message.chat_id.in_(chat_ids)
+            ).group_by(Message.chat_id).all()
+        )
+    else:
+        message_counts = {}
+    
     # 添加对话信息
     for task_chat in task_chats:
         if task_chat.chat:
             task_chat.chat_title = task_chat.chat.title
-            # 计算对话中的消息数量
-            message_count = db.query(Message).filter(Message.chat_id == task_chat.chat_id).count()
-            task_chat.chat_message_count = message_count
+            # 从预查询的结果中获取消息数量
+            task_chat.chat_message_count = message_counts.get(task_chat.chat_id, 0)
     
     return task_chats
 
@@ -260,32 +280,56 @@ async def get_pending_chats(
     """
     获取待审核的对话列表，用于创建任务
     只有管理员可以访问
+    优化版本：使用单次查询避免N+1问题
     """
-    # 获取包含待审核消息的对话
-    chats_with_pending = db.query(Chat).join(Message).filter(
+    from sqlalchemy import func, case
+    
+    # 使用子查询计算每个chat的待审核消息数量
+    pending_count_subquery = db.query(
+        Message.chat_id,
+        func.count(Message.id).label('pending_count')
+    ).filter(
         Message.audit_status == "pending"
-    ).distinct().offset(skip).limit(limit).all()
+    ).group_by(Message.chat_id).subquery()
     
-    result = []
-    for chat in chats_with_pending:
-        # 计算待审核消息数量
-        pending_message_count = db.query(Message).filter(
-            Message.chat_id == chat.id,
-            Message.audit_status == "pending"
-        ).count()
-        
-        # 获取最新消息时间
-        latest_message = db.query(Message).filter(
-            Message.chat_id == chat.id
-        ).order_by(Message.created_at.desc()).first()
-        
-        result.append({
-            "id": chat.id,
-            "title": chat.title,
-            "pending_message_count": pending_message_count,
-            "last_message_at": latest_message.created_at if latest_message else chat.created_at,
-            "created_at": chat.created_at,
-            "user_id": chat.user_id
-        })
+    # 使用子查询获取每个chat的最新消息时间
+    latest_message_subquery = db.query(
+        Message.chat_id,
+        func.max(Message.created_at).label('last_message_at')
+    ).group_by(Message.chat_id).subquery()
     
-    return result 
+    # 主查询：一次性获取所有数据，包括join子查询结果
+    query = db.query(
+        Chat.id,
+        Chat.title,
+        Chat.created_at,
+        Chat.user_id,
+        func.coalesce(pending_count_subquery.c.pending_count, 0).label('pending_message_count'),
+        func.coalesce(latest_message_subquery.c.last_message_at, Chat.created_at).label('last_message_at')
+    ).outerjoin(
+        pending_count_subquery, 
+        Chat.id == pending_count_subquery.c.chat_id
+    ).outerjoin(
+        latest_message_subquery,
+        Chat.id == latest_message_subquery.c.chat_id
+    ).filter(
+        # 只返回有待审核消息的对话
+        pending_count_subquery.c.pending_count > 0
+    ).order_by(
+        Chat.created_at.desc()
+    ).offset(skip).limit(limit)
+    
+    # 执行查询并构造结果
+    results = query.all()
+    
+    return [
+        {
+            "id": row.id,
+            "title": row.title,
+            "pending_message_count": row.pending_message_count,
+            "last_message_at": row.last_message_at,
+            "created_at": row.created_at,
+            "user_id": row.user_id
+        }
+        for row in results
+    ] 
