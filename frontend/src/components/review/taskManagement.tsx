@@ -43,6 +43,12 @@ const TaskManagement: React.FC = () => {
         fetchStats,
         fetchPendingChats,
         fetchAllChats,
+        handlePageChange,
+        addTaskOptimistically,
+        removeTaskOptimistically,
+        updateTaskOptimistically,
+        rollbackTaskCreation,
+        rollbackTaskDeletion,
     } = useTaskData();
 
     // UI状态管理Hook
@@ -56,19 +62,25 @@ const TaskManagement: React.FC = () => {
         resetSelection,
     } = useTaskUI();
 
-    // 任务操作Hook
+    // 任务操作Hook（传入乐观更新函数）
     const {
         handleCreateTask,
         handleAssignTask,
         handleDeleteTask,
-    } = useTaskOperations();
+    } = useTaskOperations({
+        addTaskOptimistically,
+        removeTaskOptimistically,
+        updateTaskOptimistically,
+        rollbackTaskCreation,
+        rollbackTaskDeletion,
+    });
 
     // ==================== 表单实例 ====================
     const [form] = Form.useForm();         // 创建任务表单实例
     const [assignForm] = Form.useForm();   // 分配任务表单实例
 
     // ==================== 状态解构 ====================
-    const { users, tasks, stats, pendingChats, allChats } = dataState;
+    const { users, tasks, stats, pendingChats, allChats, pagination } = dataState;
     const { 
         loading, 
         modals: { create: createModalVisible, chat: chatModalVisible, assign: assignModalVisible },
@@ -80,12 +92,13 @@ const TaskManagement: React.FC = () => {
     /**
      * 组件初始化时获取必要数据
      * 包括用户列表、任务列表、统计数据
+     * 使用空依赖数组，只在组件挂载时执行一次
      */
     useEffect(() => {
         fetchUsers();     // 获取标注员列表
-        fetchTasks();     // 获取任务列表
+        fetchTasks();     // 获取任务列表（使用默认分页参数）
         fetchStats();     // 获取统计数据
-    }, [fetchUsers, fetchTasks, fetchStats]);
+    }, []); // 空依赖数组，避免重复调用
 
     // ==================== 事件处理函数 ====================
 
@@ -107,12 +120,12 @@ const TaskManagement: React.FC = () => {
             };
             
             await handleCreateTask(taskData, () => {
-                // 成功回调：重置UI状态和刷新数据
+                // 成功回调：重置UI状态，乐观更新已处理数据刷新
                 toggleModal('create', false);
                 resetSelection();
                 form.resetFields();
-                fetchTasks();
-                fetchStats();
+                // fetchTasks(); // 注释掉，因为乐观更新已处理
+                // fetchStats(); // 注释掉，因为乐观更新已处理
             });
         } finally {
             setLoading(false);
@@ -129,11 +142,11 @@ const TaskManagement: React.FC = () => {
         setLoading(true);
         try {
             await handleAssignTask(selectedTask.id, { assigned_to_id: values.assigned_to_id }, () => {
-                // 成功回调：重置UI状态和刷新数据
+                // 成功回调：重置UI状态，乐观更新已处理数据刷新
                 toggleModal('assign', false);
                 setSelectedTask(null);
                 assignForm.resetFields();
-                fetchTasks();
+                // fetchTasks(); // 注释掉，因为乐观更新已处理
             });
         } finally {
             setLoading(false);
@@ -145,12 +158,15 @@ const TaskManagement: React.FC = () => {
      * @param taskId 要删除的任务ID
      */
     const onDeleteTask = async (taskId: string) => {
+        // 找到要删除的任务数据，用于乐观更新回滚
+        const taskToDelete = tasks.find(task => task.id === taskId);
+        
         setLoading(true);
         try {
-            await handleDeleteTask(taskId, () => {
-                // 成功回调：刷新数据
-                fetchTasks();
-                fetchStats();
+            await handleDeleteTask(taskId, taskToDelete, () => {
+                // 成功回调：由于已经进行乐观更新，不需要手动刷新
+                // fetchTasks(); // 注释掉，因为乐观更新已处理
+                // fetchStats(); // 注释掉，因为乐观更新已处理
             });
         } finally {
             setLoading(false);
@@ -235,9 +251,11 @@ const TaskManagement: React.FC = () => {
             <TaskTable
                 tasks={tasks}
                 loading={loading}
+                pagination={pagination}
                 onCreate={handleCreateClick}
                 onAssign={handleTaskAssign}
                 onDelete={onDeleteTask}
+                onPageChange={handlePageChange}
             />
 
             {/* ==================== 弹窗组件 ==================== */}

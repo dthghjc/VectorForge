@@ -345,17 +345,27 @@ class TaskCRUD:
         if not task:
             return False
         
-        # 记录日志
-        self._log_action(
-            db, task_id, deleted_by_id,
-            "delete_task",
-            f"删除任务: {task.title}",
-            old_value={"task_id": task_id, "title": task.title}
-        )
-        
-        db.delete(task)
-        db.commit()
-        return True
+        try:
+            # 删除相关的任务对话记录
+            db.query(TaskChat).filter(TaskChat.task_id == task_id).delete()
+            
+            # 删除相关的任务日志记录
+            db.query(TaskLog).filter(TaskLog.task_id == task_id).delete()
+            
+            # 最后删除任务本身
+            db.delete(task)
+            
+            # 提交事务
+            db.commit()
+            
+            # 可以考虑在独立的日志表中记录删除操作（不关联task_id）
+            # 这里暂时省略，避免复杂化
+            
+            return True
+        except Exception as e:
+            # 如果删除失败，回滚事务
+            db.rollback()
+            raise e
     
     def _log_action(
         self,

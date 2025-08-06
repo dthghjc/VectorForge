@@ -14,12 +14,20 @@ interface TaskTableProps {
     tasks: TaskResponse[];
     /** 加载状态 */
     loading: boolean;
+    /** 分页信息 */
+    pagination: {
+        current: number;
+        pageSize: number;
+        total: number;
+    };
     /** 创建任务回调 */
     onCreate: () => void;
     /** 分配任务回调 */
     onAssign: (task: TaskResponse) => void;
     /** 删除任务回调 */
     onDelete: (taskId: string) => void;
+    /** 分页变化回调 */
+    onPageChange: (page: number, pageSize?: number) => void;
 }
 
 /**
@@ -55,9 +63,11 @@ const priorityColors = {
 const TaskTable: React.FC<TaskTableProps> = React.memo(({
     tasks,
     loading,
-    onCreate,
-    onAssign,
-    onDelete
+    pagination,     // 分页信息
+    onCreate,       // 创建任务回调
+    onAssign,       // 分配任务回调
+    onDelete,       // 删除任务回调
+    onPageChange    // 分页变化回调
 }) => {
     /**
      * 任务表格列配置
@@ -184,9 +194,16 @@ const TaskTable: React.FC<TaskTableProps> = React.memo(({
                 rowKey="id"
                 loading={loading}
                 pagination={{
-                    showSizeChanger: true,      // 显示每页条数选择器
-                    showQuickJumper: true,      // 显示快速跳转到某页
-                    showTotal: (total) => `共 ${total} 条记录`,  // 显示总数
+                    current: pagination.current,           // 当前页码
+                    pageSize: pagination.pageSize,         // 每页条数
+                    total: pagination.total,               // 总条数
+                    showSizeChanger: true,                  // 显示每页条数选择器
+                    showQuickJumper: true,                  // 显示快速跳转到某页
+                    showTotal: (total, range) => 
+                        `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,  // 显示总数和范围
+                    pageSizeOptions: ['10', '20', '50', '100'],  // 每页条数选项
+                    onChange: onPageChange,                  // 分页变化回调
+                    onShowSizeChange: onPageChange,          // 每页条数变化回调
                 }}
             />
         </Card>
