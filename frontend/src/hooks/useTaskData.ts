@@ -289,24 +289,46 @@ export const useTaskData = () => {
 
     /**
      * 统一的初始化函数
-     * 使用 Promise.all 确保所有必要的数据同时完成加载
-     * 避免竞态条件导致的页面显示问题
+     * 使用 Promise.allSettled 允许部分API失败，显示成功加载的数据
+     * 避免一个API失败导致整个页面空白的问题
      */
     const fetchInitialData = useCallback(async () => {
-        try {
-            // 并行获取所有初始化需要的数据
-            await Promise.all([
-                fetchUsers(),           // 获取用户列表
-                fetchStats(),           // 获取统计数据
-                fetchTaskDataInternal(  // 获取第一页任务数据
-                    initialDataState.pagination.current,
-                    initialDataState.pagination.pageSize
-                )
-            ]);
-        } catch (error) {
-            // 统一处理初始化失败的情况
-            console.error("页面初始化失败:", error);
-            message.error("获取页面数据失败，请刷新重试");
+        // 使用 Promise.allSettled 允许部分失败
+        const results = await Promise.allSettled([
+            fetchUsers(),           // 获取用户列表
+            fetchStats(),           // 获取统计数据
+            fetchTaskDataInternal(  // 获取第一页任务数据
+                initialDataState.pagination.current,
+                initialDataState.pagination.pageSize
+            )
+        ]);
+
+        // 分析结果并提供简洁的错误反馈
+        const [usersResult, statsResult, tasksResult] = results;
+        const failures = [];
+
+        if (usersResult.status === 'rejected') {
+            console.error('用户列表加载失败:', usersResult.reason);
+            failures.push('用户列表');
+        }
+
+        if (statsResult.status === 'rejected') {
+            console.error('统计数据加载失败:', statsResult.reason);
+            failures.push('统计数据');
+        }
+
+        if (tasksResult.status === 'rejected') {
+            console.error('任务列表加载失败:', tasksResult.reason);
+            failures.push('任务列表');
+        }
+
+        // 简洁的用户反馈
+        if (failures.length > 0 && failures.length < results.length) {
+            // 只在部分失败时提示，让用户知道可以刷新页面
+            message.warning(`${failures.join('、')} 加载失败，请刷新页面重试`);
+        } else if (failures.length === results.length) {
+            // 所有都失败时提示网络问题
+            message.error("服务器连接失败，请刷新页面重试");
         }
     }, [fetchUsers, fetchStats, fetchTaskDataInternal]);
 
@@ -319,7 +341,7 @@ export const useTaskData = () => {
         fetchStats,
         fetchPendingChats,
         fetchAllChats,
-        fetchInitialData, // 新增：统一初始化函数
+        fetchInitialData, // 统一初始化函数
         // 分页控制函数
         handlePageChange,
         updatePagination,
