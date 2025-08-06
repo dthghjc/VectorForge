@@ -1,14 +1,3 @@
-/**
- * 任务管理组件
- * 用于管理对话标注任务，包括任务创建、分配、删除等功能
- * 支持对话选择、标注员分配、任务统计等核心功能
- * 
- * 重构说明：
- * - 使用useReducer管理复杂状态
- * - 提取自定义Hook处理业务逻辑
- * - 拆分为多个职责单一的子组件
- * - 优化组件结构和可维护性
- */
 import React, { useEffect, useCallback } from 'react';
 import { Typography, Form } from 'antd';
 // 导入任务相关的类型定义
@@ -38,11 +27,9 @@ const TaskManagement: React.FC = () => {
     // 数据状态管理Hook
     const {
         dataState,
-        fetchUsers,
-        fetchTasks,
-        fetchStats,
         fetchPendingChats,
         fetchAllChats,
+        fetchInitialData, // 统一初始化函数，替代原来的单独调用
         handlePageChange,
         addTaskOptimistically,
         removeTaskOptimistically,
@@ -91,14 +78,21 @@ const TaskManagement: React.FC = () => {
 
     /**
      * 组件初始化时获取必要数据
-     * 包括用户列表、任务列表、统计数据
-     * 使用空依赖数组，只在组件挂载时执行一次
+     * 使用统一的初始化函数，通过Promise.all确保所有数据同时完成
+     * 避免竞态条件导致的显示问题
      */
     useEffect(() => {
-        fetchUsers();     // 获取标注员列表
-        fetchTasks();     // 获取任务列表（使用默认分页参数）
-        fetchStats();     // 获取统计数据
-    }, []); // 空依赖数组，避免重复调用
+        const loadData = async () => {
+            setLoading(true); // 开始加载，显示全局loading
+            try {
+                await fetchInitialData(); // 使用统一的初始化函数
+            } finally {
+                setLoading(false); // 完成加载，关闭loading
+            }
+        };
+
+        loadData();
+    }, [fetchInitialData, setLoading]); // 依赖统一初始化函数和loading设置函数
 
     // ==================== 事件处理函数 ====================
 

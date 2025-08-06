@@ -131,33 +131,49 @@ export const useTaskOperations = (optimisticUpdates?: {
         taskData?: any, // 传入要删除的任务数据，用于回滚
         onSuccess?: () => void
     ) => {
-        console.log('[DEBUG] 开始删除任务:', taskId, taskData);
+        console.log('[DELETE] 开始删除任务:', taskId);
+        console.log('[DELETE] 删除前任务数据:', taskData);
         
         // 1. 先进行乐观更新（立即从列表中移除）
         if (optimisticUpdates) {
-            console.log('[DEBUG] 执行乐观删除');
+            console.log('[DELETE] 执行乐观删除');
             optimisticUpdates.removeTaskOptimistically(taskId);
         }
 
         try {
             // 2. 调用 API 删除任务
-            console.log('[DEBUG] 调用删除 API');
+            console.log('[DELETE] 调用删除 API');
             await deleteTask(taskId);
             
-            console.log('[DEBUG] 删除 API 成功');
+            console.log('[DELETE] API 删除成功');
             message.success('任务删除成功');
             onSuccess?.();
-        } catch (error) {
-            console.log('[DEBUG] 删除 API 失败，开始回滚:', error);
+        } catch (error: any) {
+            console.log('[DELETE] API 删除失败，错误类型:', error?.name, error?.code);
             
-            // 3. 失败：回滚乐观更新（重新添加到列表）
-            if (optimisticUpdates && taskData) {
-                console.log('[DEBUG] 执行回滚操作');
-                optimisticUpdates.rollbackTaskDeletion(taskData);
+            // 3. 智能错误处理
+            const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+            const isNetworkError = error?.message?.includes('Network Error') || !error?.response;
+            
+            if (isTimeoutError) {
+                console.log('[DELETE] 检测到超时错误，可能删除已成功，不回滚');
+                message.warning('操作超时，请刷新页面查看最新状态');
+                // 超时情况下不回滚，因为删除可能已经成功了
+            } else if (isNetworkError) {
+                console.log('[DELETE] 检测到网络错误，不确定删除状态，不回滚');
+                message.warning('网络错误，请刷新页面查看最新状态');
+                // 网络错误情况下也不回滚
+            } else {
+                console.log('[DELETE] 确认的服务器错误，执行回滚');
+                // 只有在确认的服务器错误时才回滚
+                if (optimisticUpdates && taskData) {
+                    console.log('[DELETE] 执行回滚，恢复任务:', taskData.id);
+                    optimisticUpdates.rollbackTaskDeletion(taskData);
+                }
+                message.error(`删除任务失败: ${error?.response?.data?.message || error.message}`);
             }
             
             console.error("删除任务失败:", error);
-            message.error("删除任务失败");
             throw error;
         }
     }, [optimisticUpdates]);

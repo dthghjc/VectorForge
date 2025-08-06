@@ -49,6 +49,7 @@ type DataAction =
     | { type: 'SET_ALL_CHATS'; payload: any[] }
     | { type: 'SET_PAGINATION'; payload: { current: number; pageSize: number; total: number } }
     | { type: 'UPDATE_PAGINATION'; payload: Partial<{ current: number; pageSize: number; total: number }> }
+    | { type: 'SET_TASKS_AND_PAGINATION'; payload: { tasks: any[]; pagination: { current: number; pageSize: number; total: number } } }
     | { type: 'RESET_DATA' };
 
 const dataReducer = (state: DataState, action: DataAction): DataState => {
@@ -67,6 +68,12 @@ const dataReducer = (state: DataState, action: DataAction): DataState => {
             return { ...state, pagination: action.payload };
         case 'UPDATE_PAGINATION':
             return { ...state, pagination: { ...state.pagination, ...action.payload } };
+        case 'SET_TASKS_AND_PAGINATION':
+            return { 
+                ...state, 
+                tasks: action.payload.tasks,
+                pagination: { ...state.pagination, ...action.payload.pagination }
+            };
         case 'RESET_DATA':
             return initialDataState;
         default:
@@ -100,16 +107,13 @@ export const useTaskData = () => {
     }, []);
 
     /**
-     * 获取任务列表
-     * @param current 当前页码（从1开始）
-     * @param pageSize 每页数量
+     * 内部核心获取任务函数
+     * 统一任务获取逻辑，避免重复代码
+     * @param page 页码（从1开始）
+     * @param size 每页数量
      */
-    const fetchTasks = useCallback(async (current?: number, pageSize?: number) => {
+    const fetchTaskDataInternal = useCallback(async (page: number, size: number) => {
         try {
-            // 如果没有传入参数，使用当前分页状态
-            const page = current || dataState.pagination.current;
-            const size = pageSize || dataState.pagination.pageSize;
-            
             // 计算skip参数（后端从0开始）
             const skip = (page - 1) * size;
             
@@ -118,24 +122,38 @@ export const useTaskData = () => {
                 limit: size
             });
             
-            // 更新任务数据
-            dataDispatch({ type: 'SET_TASKS', payload: taskList });
-            
-            // 更新分页信息（暂时使用返回的数量作为总数的估计）
+            // 计算总数（暂时使用返回的数量作为总数的估计）
             // TODO: 后端需要返回真实的总数
             const total = taskList.length === size ? 
-                Math.max(dataState.pagination.total, page * size + 1) : 
+                page * size + 1 : 
                 (page - 1) * size + taskList.length;
-                
+            
+            // 使用新的合并action，减少重渲染次数
             dataDispatch({
-                type: 'UPDATE_PAGINATION',
-                payload: { current: page, pageSize: size, total }
+                type: 'SET_TASKS_AND_PAGINATION',
+                payload: {
+                    tasks: taskList,
+                    pagination: { current: page, pageSize: size, total }
+                }
             });
         } catch (error) {
             console.error("获取任务失败:", error);
             message.error("获取任务失败");
         }
-    }, [dataState.pagination]);
+    }, []); // 无依赖，因为 page 和 size 是参数
+
+    /**
+     * 获取任务列表（用于初始化和手动刷新）
+     * @param current 当前页码（从1开始）
+     * @param pageSize 每页数量
+     */
+    const fetchTasks = useCallback(async (current?: number, pageSize?: number) => {
+        // 如果没有传入参数，使用当前分页状态的默认值
+        const page = current || initialDataState.pagination.current;
+        const size = pageSize || initialDataState.pagination.pageSize;
+        
+        await fetchTaskDataInternal(page, size);
+    }, [fetchTaskDataInternal]);
 
     /**
      * 获取任务统计数据
@@ -183,33 +201,10 @@ export const useTaskData = () => {
      * @param pageSize 每页大小
      */
     const handlePageChange = useCallback(async (page: number, pageSize?: number) => {
-        try {
-            // 直接在这里处理分页逻辑，避免依赖 fetchTasks
-            const size = pageSize || 10;
-            const skip = (page - 1) * size;
-            
-            const taskList = await getTasks({
-                skip,
-                limit: size
-            });
-            
-            // 更新任务数据
-            dataDispatch({ type: 'SET_TASKS', payload: taskList });
-            
-            // 更新分页信息
-            const total = taskList.length === size ? 
-                page * size + 1 : 
-                (page - 1) * size + taskList.length;
-                
-            dataDispatch({
-                type: 'UPDATE_PAGINATION',
-                payload: { current: page, pageSize: size, total }
-            });
-        } catch (error) {
-            console.error("获取任务失败:", error);
-            message.error("获取任务失败");
-        }
-    }, []);
+        // 使用当前分页状态的 pageSize 作为默认值
+        const size = pageSize || dataState.pagination.pageSize;
+        await fetchTaskDataInternal(page, size);
+    }, [fetchTaskDataInternal, dataState.pagination.pageSize]);
 
     /**
      * 更新分页设置
@@ -281,11 +276,39 @@ export const useTaskData = () => {
      * @param task 被删除的任务数据
      */
     const rollbackTaskDeletion = useCallback((task: any) => {
-        // 直接添加任务到列表，不修改统计数据（因为实际删除失败，数据库中任务还在）
-        const updatedTasks = [task, ...dataState.tasks];
-        dataDispatch({ type: 'SET_TASKS', payload: updatedTasks });
+        // 检查任务是否已经存在于列表中
+        const taskExists = dataState.tasks.some(t => t.id === task.id);
+        
+        if (!taskExists) {
+            // 直接添加任务到列表，不修改统计数据（因为实际删除失败，数据库中任务还在）
+            const updatedTasks = [task, ...dataState.tasks];
+            dataDispatch({ type: 'SET_TASKS', payload: updatedTasks });
+        }
         // 注意：不更新统计数据，因为任务实际上没有被删除
     }, [dataState.tasks]);
+
+    /**
+     * 统一的初始化函数
+     * 使用 Promise.all 确保所有必要的数据同时完成加载
+     * 避免竞态条件导致的页面显示问题
+     */
+    const fetchInitialData = useCallback(async () => {
+        try {
+            // 并行获取所有初始化需要的数据
+            await Promise.all([
+                fetchUsers(),           // 获取用户列表
+                fetchStats(),           // 获取统计数据
+                fetchTaskDataInternal(  // 获取第一页任务数据
+                    initialDataState.pagination.current,
+                    initialDataState.pagination.pageSize
+                )
+            ]);
+        } catch (error) {
+            // 统一处理初始化失败的情况
+            console.error("页面初始化失败:", error);
+            message.error("获取页面数据失败，请刷新重试");
+        }
+    }, [fetchUsers, fetchStats, fetchTaskDataInternal]);
 
     return {
         // 状态
@@ -296,6 +319,7 @@ export const useTaskData = () => {
         fetchStats,
         fetchPendingChats,
         fetchAllChats,
+        fetchInitialData, // 新增：统一初始化函数
         // 分页控制函数
         handlePageChange,
         updatePagination,

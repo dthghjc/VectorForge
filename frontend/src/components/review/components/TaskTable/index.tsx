@@ -148,12 +148,22 @@ const TaskTable: React.FC<TaskTableProps> = React.memo(({
             key: 'deadline',
             render: (deadline: string, record: TaskResponse) => (
                 deadline ? (
-                    // 有截止时间时显示时间，逾期时用红色显示
-                    <span style={{ color: record.is_overdue ? '#ff4d4f' : undefined }}>
-                        <ClockCircleOutlined /> {dayjs(deadline).format('YYYY-MM-DD HH:mm')}
-                        {/* 逾期时显示逾期标签 */}
-                        {record.is_overdue && <Tag color="red">逾期</Tag>}
-                    </span>
+                    <div>
+                        {/* 时间显示行 */}
+                        <div style={{ 
+                            color: record.is_overdue ? '#ff4d4f' : undefined,
+                            marginBottom: record.is_overdue ? '4px' : '0'
+                        }}>
+                            <ClockCircleOutlined style={{ marginRight: '4px' }} />
+                            {dayjs(deadline).format('YYYY-MM-DD HH:mm')}
+                        </div>
+                        {/* 逾期标签单独一行 */}
+                        {record.is_overdue && (
+                            <div>
+                                <Tag color="red" style={{ margin: 0 }}>逾期</Tag>
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     // 无截止时间时显示提示
                     <span style={{ color: '#999' }}>无限制</span>
