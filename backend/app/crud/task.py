@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import and_, or_, func, desc
+from sqlalchemy import and_, or_, func, desc, case
 from datetime import datetime
 
 from app.models.task import AnnotationTask, TaskChat, TaskLog, TaskStatus, TaskPriority
@@ -73,9 +73,13 @@ class TaskCRUD:
         return db.query(AnnotationTask).options(
             selectinload(AnnotationTask.created_by),
             selectinload(AnnotationTask.assigned_to),
-            selectinload(AnnotationTask.task_chats).selectinload(TaskChat.chat),
-            selectinload(AnnotationTask.task_chats).selectinload(TaskChat.annotated_by)
+            # 任务详情只需要 TaskChat 基本字段，不需要加载 Chat/annotated_by 关系
+            selectinload(AnnotationTask.task_chats)
         ).filter(AnnotationTask.id == task_id).first()
+
+    def get_task_basic_by_id(self, db: Session, task_id: str) -> Optional[AnnotationTask]:
+        """仅用于权限校验/存在性检查的轻量查询，避免关系加载造成的开销"""
+        return db.query(AnnotationTask).filter(AnnotationTask.id == task_id).first()
     
     def get_tasks(
         self, 
@@ -273,7 +277,7 @@ class TaskCRUD:
     
     def get_task_stats(self, db: Session, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取任务统计信息
+        获取任务统计信息，使用单条聚合 SQL 避免全量加载
 
         参数:
             db: 数据库会话
@@ -282,56 +286,57 @@ class TaskCRUD:
         返回:
             stats: 任务统计字典，包括任务总数、各状态任务数、对话总数、完成对话数、逾期任务数、整体完成率等
         """
-        # 查询所有任务，如果指定user_id，则只查与该用户相关的任务
-        query = db.query(AnnotationTask)
+        now = get_current_beijing_time()
+
+        base_query = db.query(
+            func.count(AnnotationTask.id).label("total_tasks"),
+            func.sum(case(
+                (
+                    or_(
+                        AnnotationTask.status == TaskStatus.CREATED,
+                        AnnotationTask.status == TaskStatus.ASSIGNED
+                    ), 1
+                ), else_=0
+            )).label("pending_tasks"),
+            func.sum(case((AnnotationTask.status == TaskStatus.IN_PROGRESS, 1), else_=0)).label("in_progress_tasks"),
+            func.sum(case((AnnotationTask.status == TaskStatus.COMPLETED, 1), else_=0)).label("completed_tasks"),
+            func.sum(case(
+                (
+                    and_(
+                        AnnotationTask.deadline.isnot(None),
+                        AnnotationTask.deadline < now,
+                        AnnotationTask.status != TaskStatus.COMPLETED
+                    ), 1
+                ), else_=0
+            )).label("overdue_tasks"),
+            func.coalesce(func.sum(AnnotationTask.total_chats), 0).label("total_chats"),
+            func.coalesce(func.sum(AnnotationTask.completed_chats), 0).label("completed_chats")
+        )
+
         if user_id:
-            # 只统计该用户创建或被分配的任务
-            query = query.filter(
+            base_query = base_query.filter(
                 or_(
                     AnnotationTask.created_by_id == user_id,
                     AnnotationTask.assigned_to_id == user_id
                 )
             )
-        tasks = query.all()
 
-        # 初始化统计数据
-        stats = {
-            "total_tasks": len(tasks),         # 任务总数
-            "pending_tasks": 0,                # 待处理任务数（未开始/已分配）
-            "in_progress_tasks": 0,            # 进行中任务数
-            "completed_tasks": 0,              # 已完成任务数
-            "overdue_tasks": 0,                # 逾期任务数
-            "total_chats": 0,                  # 任务下所有对话总数
-            "completed_chats": 0,              # 已完成标注的对话数
-            "overall_completion_rate": 0.0     # 整体完成率（百分比）
+        row = base_query.one()
+
+        total_chats = int(row.total_chats or 0)
+        completed_chats = int(row.completed_chats or 0)
+        overall_completion_rate = round((completed_chats / total_chats) * 100, 2) if total_chats > 0 else 0.0
+
+        return {
+            "total_tasks": int(row.total_tasks or 0),
+            "pending_tasks": int(row.pending_tasks or 0),
+            "in_progress_tasks": int(row.in_progress_tasks or 0),
+            "completed_tasks": int(row.completed_tasks or 0),
+            "overdue_tasks": int(row.overdue_tasks or 0),
+            "total_chats": total_chats,
+            "completed_chats": completed_chats,
+            "overall_completion_rate": overall_completion_rate,
         }
-
-        now = get_current_beijing_time()  # 当前北京时间
-
-        # 遍历所有任务，累加统计
-        for task in tasks:
-            stats["total_chats"] += task.total_chats
-            stats["completed_chats"] += task.completed_chats
-
-            # 统计任务状态
-            if task.status == TaskStatus.CREATED or task.status == TaskStatus.ASSIGNED:
-                stats["pending_tasks"] += 1
-            elif task.status == TaskStatus.IN_PROGRESS:
-                stats["in_progress_tasks"] += 1
-            elif task.status == TaskStatus.COMPLETED:
-                stats["completed_tasks"] += 1
-
-            # 判断是否逾期
-            if task.is_overdue:
-                stats["overdue_tasks"] += 1
-
-        # 计算整体完成率（已完成对话数 / 总对话数，保留两位小数，百分比）
-        if stats["total_chats"] > 0:
-            stats["overall_completion_rate"] = round(
-                (stats["completed_chats"] / stats["total_chats"]) * 100, 2
-            )
-
-        return stats
     
     def get_task_logs(self, db: Session, task_id: str) -> List[TaskLog]:
         """获取任务日志"""

@@ -1,10 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, exists
 
 from app.db.session import get_db
 from app.models.user import User
 from app.models.chat import Chat, Message
+from app.models.task import TaskChat
 from app.crud.task import task_crud
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskAssign, TaskChatAnnotate,
@@ -26,12 +28,11 @@ async def create_task(
     创建新的标注任务
     只有管理员可以创建任务
     """
-    # 验证对话ID是否存在
-    existing_chats = db.query(Chat).filter(
+    # 验证对话ID是否存在（只做计数，避免加载大量行）
+    existing_count = db.query(func.count(Chat.id)).filter(
         Chat.id.in_(task_create.chat_ids)
-    ).all()
-    
-    if len(existing_chats) != len(task_create.chat_ids):
+    ).scalar()
+    if int(existing_count or 0) != len(task_create.chat_ids):
         raise APIExceptions.bad_request("部分对话ID不存在")
     
     # 如果指定了分配用户，验证用户是否存在且有标注权限
@@ -149,7 +150,7 @@ async def get_task_chats(
     获取任务中的对话列表
     """
     # 权限检查
-    task = task_crud.get_task_by_id(db, task_id)
+    task = task_crud.get_task_basic_by_id(db, task_id)
     if not task:
         raise APIExceptions.not_found("任务不存在")
     
@@ -202,7 +203,7 @@ async def annotate_task_chat(
     只有分配给任务的标注员可以进行标注
     """
     # 权限检查
-    task = task_crud.get_task_by_id(db, task_id)
+    task = task_crud.get_task_basic_by_id(db, task_id)
     if not task:
         raise APIExceptions.not_found("任务不存在")
     
@@ -298,7 +299,10 @@ async def get_pending_chats(
         func.max(Message.created_at).label('last_message_at')
     ).group_by(Message.chat_id).subquery()
     
-    # 主查询：一次性获取所有数据，包括join子查询结果
+    # NOT EXISTS 子查询：排除已被纳入任何任务的对话
+    assigned_exists = db.query(TaskChat.id).filter(TaskChat.chat_id == Chat.id).exists()
+
+    # 主查询：一次性获取所有数据，包括join子查询结果，并排除已分配到任务的对话
     query = db.query(
         Chat.id,
         Chat.title,
@@ -314,7 +318,8 @@ async def get_pending_chats(
         Chat.id == latest_message_subquery.c.chat_id
     ).filter(
         # 只返回有待审核消息的对话
-        pending_count_subquery.c.pending_count > 0
+        pending_count_subquery.c.pending_count > 0,
+        ~assigned_exists
     ).order_by(
         Chat.created_at.desc()
     ).offset(skip).limit(limit)

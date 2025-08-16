@@ -1,5 +1,5 @@
-from app.models.base import Base, TimestampMixin
-from sqlalchemy import Column, String, ForeignKey, Integer, Text, DateTime, Enum, Boolean
+from app.models.base import Base, TimestampMixin, get_current_beijing_time
+from sqlalchemy import Column, String, ForeignKey, Integer, Text, DateTime, Enum, Boolean, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import JSON
 import uuid
@@ -24,6 +24,12 @@ class TaskPriority(enum.Enum):
 class AnnotationTask(Base, TimestampMixin):
     """标注任务主表"""
     __tablename__ = 'annotation_tasks'
+    __table_args__ = (
+        Index('ix_annotation_tasks_status', 'status'),
+        Index('ix_annotation_tasks_assigned_to_id', 'assigned_to_id'),
+        Index('ix_annotation_tasks_created_by_id', 'created_by_id'),
+        Index('ix_annotation_tasks_deadline', 'deadline'),
+    )
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(255), nullable=False, comment="任务标题")
@@ -69,11 +75,21 @@ class AnnotationTask(Base, TimestampMixin):
         """任务是否已逾期"""
         if not self.deadline:
             return False
-        return datetime.now() > self.deadline and self.status != TaskStatus.COMPLETED
+        # 使用与持久化一致的时间并处理 naive/aware 差异，避免比较异常
+        now = get_current_beijing_time()
+        deadline = self.deadline
+        if deadline.tzinfo is None:
+            return now.replace(tzinfo=None) > deadline and self.status != TaskStatus.COMPLETED
+        return now > deadline and self.status != TaskStatus.COMPLETED
 
 class TaskChat(Base, TimestampMixin):
     """任务对话关联表"""
     __tablename__ = 'task_chats'
+    __table_args__ = (
+        Index('ix_task_chats_task_id', 'task_id'),
+        Index('ix_task_chats_chat_id', 'chat_id'),
+        Index('ix_task_chats_annotation_status', 'annotation_status'),
+    )
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     task_id = Column(String(36), ForeignKey('annotation_tasks.id'), nullable=False)
@@ -96,6 +112,10 @@ class TaskChat(Base, TimestampMixin):
 class TaskLog(Base, TimestampMixin):
     """任务操作日志"""
     __tablename__ = 'task_logs'
+    __table_args__ = (
+        Index('ix_task_logs_task_id', 'task_id'),
+        Index('ix_task_logs_user_id', 'user_id'),
+    )
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     task_id = Column(String(36), ForeignKey('annotation_tasks.id'), nullable=False)
