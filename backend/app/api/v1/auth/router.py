@@ -256,7 +256,7 @@ async def get_menu(current_user: User = Depends(get_current_user)) -> List[MenuI
     admin_menu = [
         MenuItemResponse(key='/chat', label='对话助手', icon='MessageOutlined'),
         MenuItemResponse(key='/vectorTools', label='向量工具', icon='DesktopOutlined'),
-        MenuItemResponse(key='/annotation', label='数据标注', icon='ContainerOutlined'),
+        # MenuItemResponse(key='/annotation', label='数据标注', icon='ContainerOutlined'),
         MenuItemResponse(key='/review', label='数据标注审核', icon='ProfileOutlined'),
         MenuItemResponse(key='/userManagement', label='用户管理', icon='IdcardOutlined'),
         MenuItemResponse(

@@ -31,6 +31,7 @@ const TaskManagement: React.FC = () => {
         fetchAllChats,
         fetchInitialData, // 统一初始化函数，替代原来的单独调用
         handlePageChange,
+        handlePendingChatsPageChange,
         addTaskOptimistically,
         removeTaskOptimistically,
         updateTaskOptimistically,
@@ -42,6 +43,7 @@ const TaskManagement: React.FC = () => {
     const {
         uiState,
         setLoading,
+        setPendingChatsLoading,
         toggleModal,
         setSelectedChats,
         setChatSourceType,
@@ -67,9 +69,10 @@ const TaskManagement: React.FC = () => {
     const [assignForm] = Form.useForm();   // 分配任务表单实例
 
     // ==================== 状态解构 ====================
-    const { users, tasks, stats, pendingChats, allChats, pagination } = dataState;
+    const { users, tasks, stats, pendingChats, allChats, pagination, pendingChatsPagination } = dataState;
     const { 
         loading, 
+        pendingChatsLoading,
         modals: { create: createModalVisible, chat: chatModalVisible, assign: assignModalVisible },
         selection: { chatIds: selectedChats, chatSourceType, task: selectedTask }
     } = uiState;
@@ -173,7 +176,8 @@ const TaskManagement: React.FC = () => {
      */
     const onSelectChats = () => {
         if (chatSourceType === 'pending') {
-            fetchPendingChats();    // 获取待审核对话
+            // 获取待审核对话时重置到第一页，并显示loading状态
+            fetchPendingChats({ page: 1 }, setPendingChatsLoading);
         } else {
             fetchAllChats();        // 获取所有对话
         }
@@ -275,6 +279,10 @@ const TaskManagement: React.FC = () => {
                 pendingChats={pendingChats}
                 allChats={allChats}
                 selectedChats={selectedChats}
+                pendingChatsPagination={pendingChatsPagination}
+                pendingChatsLoading={pendingChatsLoading}
+                onPendingChatsPageChange={handlePendingChatsPageChange}
+                setPendingChatsLoading={setPendingChatsLoading}
                 onCancel={handleChatModalCancel}
                 onOk={handleChatModalOk}
                 onSelectionChange={setSelectedChats}

@@ -25,6 +25,12 @@ interface DataState {
         pageSize: number;
         total: number;
     };
+    // 待审核对话的分页状态
+    pendingChatsPagination: {
+        current: number;
+        pageSize: number;
+        total: number;
+    };
 }
 
 const initialDataState: DataState = {
@@ -35,6 +41,12 @@ const initialDataState: DataState = {
     allChats: [],
     // 初始化分页状态
     pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+    },
+    // 初始化待审核对话分页状态
+    pendingChatsPagination: {
         current: 1,
         pageSize: 10,
         total: 0,
@@ -50,6 +62,8 @@ type DataAction =
     | { type: 'SET_PAGINATION'; payload: { current: number; pageSize: number; total: number } }
     | { type: 'UPDATE_PAGINATION'; payload: Partial<{ current: number; pageSize: number; total: number }> }
     | { type: 'SET_TASKS_AND_PAGINATION'; payload: { tasks: any[]; pagination: { current: number; pageSize: number; total: number } } }
+    | { type: 'SET_PENDING_CHATS_AND_PAGINATION'; payload: { pendingChats: any[]; pendingChatsPagination: { current: number; pageSize: number; total: number } } }
+    | { type: 'UPDATE_PENDING_CHATS_PAGINATION'; payload: Partial<{ current: number; pageSize: number; total: number }> }
     | { type: 'RESET_DATA' };
 
 const dataReducer = (state: DataState, action: DataAction): DataState => {
@@ -74,6 +88,14 @@ const dataReducer = (state: DataState, action: DataAction): DataState => {
                 tasks: action.payload.tasks,
                 pagination: { ...state.pagination, ...action.payload.pagination }
             };
+        case 'SET_PENDING_CHATS_AND_PAGINATION':
+            return { 
+                ...state, 
+                pendingChats: action.payload.pendingChats,
+                pendingChatsPagination: { ...state.pendingChatsPagination, ...action.payload.pendingChatsPagination }
+            };
+        case 'UPDATE_PENDING_CHATS_PAGINATION':
+            return { ...state, pendingChatsPagination: { ...state.pendingChatsPagination, ...action.payload } };
         case 'RESET_DATA':
             return initialDataState;
         default:
@@ -170,17 +192,48 @@ export const useTaskData = () => {
     }, []);
 
     /**
-     * 获取待审核对话列表
+     * 获取待审核对话列表（支持分页）
      */
-    const fetchPendingChats = useCallback(async () => {
+    const fetchPendingChats = useCallback(async (
+        params?: { page?: number; page_size?: number; search?: string },
+        setLoadingFn?: (loading: boolean) => void
+    ) => {
+        // 设置loading状态
+        setLoadingFn?.(true);
+        
         try {
-            const chats = await getPendingChats({ limit: 100 });
-            dataDispatch({ type: 'SET_PENDING_CHATS', payload: chats });
+            const page = params?.page || dataState.pendingChatsPagination.current;
+            const pageSize = params?.page_size || dataState.pendingChatsPagination.pageSize;
+            
+            const response = await getPendingChats({ 
+                page, 
+                page_size: pageSize,
+                search: params?.search,
+                sort_by: 'created_at',
+                sort_order: 'desc'
+            });
+            
+            // 使用合并 action 同时更新数据和分页状态
+            dataDispatch({ 
+                type: 'SET_PENDING_CHATS_AND_PAGINATION', 
+                payload: { 
+                    pendingChats: response.items,
+                    pendingChatsPagination: {
+                        current: page,
+                        pageSize: pageSize,
+                        total: response.total
+                    }
+                } 
+            });
+            
         } catch (error) {
             console.error("获取待审核对话失败:", error);
             message.error("获取待审核对话失败");
+        } finally {
+            // 无论成功失败都要关闭loading
+            setLoadingFn?.(false);
         }
-    }, []);
+    }, [dataState.pendingChatsPagination]);
 
     /**
      * 获取所有对话列表
@@ -213,6 +266,21 @@ export const useTaskData = () => {
     const updatePagination = useCallback((pagination: Partial<{ current: number; pageSize: number; total: number }>) => {
         dataDispatch({ type: 'UPDATE_PAGINATION', payload: pagination });
     }, []);
+
+    /**
+     * 处理待审核对话分页变化
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @param setLoadingFn loading状态设置函数
+     */
+    const handlePendingChatsPageChange = useCallback(async (
+        page: number, 
+        pageSize?: number, 
+        setLoadingFn?: (loading: boolean) => void
+    ) => {
+        const size = pageSize || dataState.pendingChatsPagination.pageSize;
+        await fetchPendingChats({ page, page_size: size }, setLoadingFn);
+    }, [fetchPendingChats, dataState.pendingChatsPagination.pageSize]);
 
     /**
      * 乐观更新：添加新任务到本地状态
@@ -345,6 +413,7 @@ export const useTaskData = () => {
         // 分页控制函数
         handlePageChange,
         updatePagination,
+        handlePendingChatsPageChange,  // 待审核对话分页控制
         // 乐观更新函数
         addTaskOptimistically,
         removeTaskOptimistically,

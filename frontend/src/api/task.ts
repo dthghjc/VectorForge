@@ -151,6 +151,12 @@ export interface PendingChat {
     user_id: string;
 }
 
+// 分页待审核对话响应接口
+export interface PaginatedPendingChatsResponse {
+    total: number;
+    items: PendingChat[];
+}
+
 // API 函数
 
 // 创建任务
@@ -223,15 +229,27 @@ export function deleteTask(taskId: string): Promise<{message: string}> {
     return del(`/api/v1/tasks/${taskId}`) as unknown as Promise<{message: string}>;
 }
 
+// 获取待审核对话查询参数
+export interface PendingChatsQueryParams {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    sort_by?: 'created_at' | 'pending_count' | 'last_message_at';
+    sort_order?: 'asc' | 'desc';
+}
+
 // 获取待审核对话
-export function getPendingChats(params?: {limit?: number, skip?: number}): Promise<PendingChat[]> {
+export function getPendingChats(params?: PendingChatsQueryParams): Promise<PaginatedPendingChatsResponse> {
     const queryParams = new URLSearchParams();
     
-    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
-    if (params?.skip !== undefined) queryParams.append('skip', params.skip.toString());
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.page_size !== undefined) queryParams.append('page_size', params.page_size.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
     
     const queryString = queryParams.toString();
     const url = queryString ? `/api/v1/tasks/chats/pending?${queryString}` : '/api/v1/tasks/chats/pending';
     
-    return get(url) as unknown as Promise<PendingChat[]>;
+    return get(url) as unknown as Promise<PaginatedPendingChatsResponse>;
 } 

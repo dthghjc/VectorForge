@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, exists
+from sqlalchemy import func, exists, case, text
 
 from app.db.session import get_db
 from app.models.user import User
@@ -11,7 +11,8 @@ from app.crud.task import task_crud
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskAssign, TaskChatAnnotate,
     TaskResponse, TaskDetailResponse, TaskChatResponse, TaskLogResponse,
-    TaskStats, TaskQueryParams, TaskStatusEnum, TaskPriorityEnum
+    TaskStats, TaskQueryParams, TaskStatusEnum, TaskPriorityEnum,
+    PendingChatResponse, PaginatedPendingChatsResponse
 )
 from app.api.v1.auth.router import get_current_user, get_current_admin
 from app.core.exceptions import APIExceptions
@@ -271,70 +272,121 @@ async def delete_task(
     
     return {"message": "任务删除成功"}
 
-@router.get("/chats/pending", response_model=List[dict])
+@router.get("/chats/pending", response_model=PaginatedPendingChatsResponse)
 async def get_pending_chats(
-    limit: int = Query(50, ge=1, le=200, description="限制数量"),
-    skip: int = Query(0, ge=0, description="跳过数量"),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    search: Optional[str] = Query(None, description="搜索对话标题"),
+    sort_by: str = Query("created_at", description="排序字段: created_at, pending_count, last_message_at"),
+    sort_order: str = Query("desc", regex="^(asc|desc)$", description="排序方向: asc, desc"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
     """
     获取待审核的对话列表，用于创建任务
-    只有管理员可以访问
-    优化版本：使用单次查询避免N+1问题
+    
+    性能优化说明：
+    - 使用单个 CTE 查询减少子查询复杂度
+    - 使用窗口函数优化计数和时间聚合
+    - 建议为以下字段创建索引：
+      - messages(chat_id, audit_status, created_at)
+      - task_chats(chat_id)
+      - chats(created_at, title)
     """
-    from sqlalchemy import func, case
     
-    # 使用子查询计算每个chat的待审核消息数量
-    pending_count_subquery = db.query(
-        Message.chat_id,
-        func.count(Message.id).label('pending_count')
-    ).filter(
-        Message.audit_status == "pending"
-    ).group_by(Message.chat_id).subquery()
+    # 计算偏移量
+    skip = (page - 1) * page_size
     
-    # 使用子查询获取每个chat的最新消息时间
-    latest_message_subquery = db.query(
-        Message.chat_id,
-        func.max(Message.created_at).label('last_message_at')
-    ).group_by(Message.chat_id).subquery()
+    # 使用 CTE (Common Table Expression) 优化查询
+    # 这种方式比多个子查询更高效，可读性更好
     
-    # NOT EXISTS 子查询：排除已被纳入任何任务的对话
-    assigned_exists = db.query(TaskChat.id).filter(TaskChat.chat_id == Chat.id).exists()
-
-    # 主查询：一次性获取所有数据，包括join子查询结果，并排除已分配到任务的对话
-    query = db.query(
-        Chat.id,
-        Chat.title,
-        Chat.created_at,
-        Chat.user_id,
-        func.coalesce(pending_count_subquery.c.pending_count, 0).label('pending_message_count'),
-        func.coalesce(latest_message_subquery.c.last_message_at, Chat.created_at).label('last_message_at')
-    ).outerjoin(
-        pending_count_subquery, 
-        Chat.id == pending_count_subquery.c.chat_id
-    ).outerjoin(
-        latest_message_subquery,
-        Chat.id == latest_message_subquery.c.chat_id
-    ).filter(
-        # 只返回有待审核消息的对话
-        pending_count_subquery.c.pending_count > 0,
-        ~assigned_exists
-    ).order_by(
-        Chat.created_at.desc()
-    ).offset(skip).limit(limit)
+    # 构建动态 WHERE 条件
+    search_condition = ""
+    if search:
+        search_condition = "AND c.title LIKE :search_pattern"
     
-    # 执行查询并构造结果
-    results = query.all()
+    # 构建 CTE 查询，一次性获取所有需要的聚合数据
+    cte_query = text(f"""
+        WITH chat_aggregates AS (
+            SELECT 
+                c.id,
+                c.title,
+                c.created_at,
+                c.user_id,
+                COALESCE(pending_stats.pending_count, 0) as pending_message_count,
+                COALESCE(pending_stats.last_message_at, c.created_at) as last_message_at
+            FROM chats c
+            LEFT JOIN (
+                SELECT 
+                    chat_id,
+                    COUNT(*) as pending_count,
+                    MAX(created_at) as last_message_at
+                FROM messages 
+                WHERE audit_status = 'pending'
+                GROUP BY chat_id
+            ) pending_stats ON c.id = pending_stats.chat_id
+            WHERE pending_stats.pending_count > 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM task_chats tc WHERE tc.chat_id = c.id
+              )
+              {search_condition}
+        ),
+        total_count AS (
+            SELECT COUNT(*) as total FROM chat_aggregates
+        )
+        SELECT 
+            ca.*,
+            tc.total
+        FROM chat_aggregates ca
+        CROSS JOIN total_count tc
+        ORDER BY 
+            CASE WHEN :sort_by = 'created_at' AND :sort_order = 'desc' THEN ca.created_at END DESC,
+            CASE WHEN :sort_by = 'created_at' AND :sort_order = 'asc' THEN ca.created_at END ASC,
+            CASE WHEN :sort_by = 'pending_count' AND :sort_order = 'desc' THEN ca.pending_message_count END DESC,
+            CASE WHEN :sort_by = 'pending_count' AND :sort_order = 'asc' THEN ca.pending_message_count END ASC,
+            CASE WHEN :sort_by = 'last_message_at' AND :sort_order = 'desc' THEN ca.last_message_at END DESC,
+            CASE WHEN :sort_by = 'last_message_at' AND :sort_order = 'asc' THEN ca.last_message_at END ASC
+        LIMIT :limit OFFSET :skip
+    """)
     
-    return [
-        {
-            "id": row.id,
-            "title": row.title,
-            "pending_message_count": row.pending_message_count,
-            "last_message_at": row.last_message_at,
-            "created_at": row.created_at,
-            "user_id": row.user_id
-        }
-        for row in results
-    ] 
+    # 准备查询参数
+    params = {
+        "sort_by": sort_by,
+        "sort_order": sort_order,
+        "limit": page_size,
+        "skip": skip
+    }
+    
+    # 只有在有搜索条件时才添加搜索参数
+    if search:
+        params["search_pattern"] = f"%{search}%"
+    
+    # 执行优化后的查询
+    result = db.execute(cte_query, params)
+    
+    rows = result.fetchall()
+    
+    # 如果没有结果，返回空数据
+    if not rows:
+        return {"total": 0, "items": []}
+    
+    # 从第一行获取总数（所有行的 total 字段都相同）
+    total_count = rows[0].total
+    
+    # 构造响应数据
+    items = [
+        PendingChatResponse(
+            id=row.id,
+            title=row.title,
+            pending_message_count=row.pending_message_count,
+            last_message_at=row.last_message_at,
+            created_at=row.created_at,
+            user_id=row.user_id
+        )
+        for row in rows
+    ]
+    
+    return {
+        "total": total_count,
+        "items": items
+    }

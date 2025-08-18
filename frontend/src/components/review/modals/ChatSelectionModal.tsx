@@ -19,6 +19,18 @@ interface ChatSelectionModalProps {
     allChats: ChatBasicResponse[];
     /** 已选择的对话ID列表 */
     selectedChats: string[];
+    /** 待审核对话分页信息 */
+    pendingChatsPagination?: {
+        current: number;
+        pageSize: number;
+        total: number;
+    };
+    /** 待审核对话加载状态 */
+    pendingChatsLoading?: boolean;
+    /** 待审核对话分页变化回调 */
+    onPendingChatsPageChange?: (page: number, pageSize?: number, setLoadingFn?: (loading: boolean) => void) => Promise<void>;
+    /** 设置待审核对话加载状态回调 */
+    setPendingChatsLoading?: (loading: boolean) => void;
     /** 关闭弹窗回调 */
     onCancel: () => void;
     /** 确认选择回调 */
@@ -37,6 +49,10 @@ const ChatSelectionModal: React.FC<ChatSelectionModalProps> = React.memo(({
     pendingChats,
     allChats,
     selectedChats,
+    pendingChatsPagination,
+    pendingChatsLoading,
+    onPendingChatsPageChange,
+    setPendingChatsLoading,
     onCancel,
     onOk,
     onSelectionChange
@@ -112,6 +128,37 @@ const ChatSelectionModal: React.FC<ChatSelectionModalProps> = React.memo(({
     const dataSource = chatSourceType === 'pending' ? pendingChats : allChats;
     const columns = chatSourceType === 'pending' ? pendingChatColumns : allChatColumns;
 
+    // 分页配置
+    const paginationConfig = useMemo(() => {
+        if (chatSourceType === 'pending' && pendingChatsPagination) {
+            // 待审核对话使用服务端分页
+            return {
+                current: pendingChatsPagination.current,
+                pageSize: pendingChatsPagination.pageSize,
+                total: pendingChatsPagination.total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total: number, range: [number, number]) => 
+                    `第 ${range[0]}-${range[1]} 条，共 ${total} 个对话`,
+                onChange: (page: number, pageSize?: number) => {
+                    onPendingChatsPageChange?.(page, pageSize, setPendingChatsLoading);
+                },
+                onShowSizeChange: (_current: number, size: number) => {
+                    // 改变每页大小时重置到第一页
+                    onPendingChatsPageChange?.(1, size, setPendingChatsLoading);
+                },
+                pageSizeOptions: ['10', '20', '50', '100'],
+            };
+        } else {
+            // 所有对话使用前端分页
+            return {
+                showSizeChanger: true,
+                showTotal: (total: number) => `共 ${total} 个对话`,
+                pageSizeOptions: ['10', '20', '50', '100'],
+            };
+        }
+    }, [chatSourceType, pendingChatsPagination, onPendingChatsPageChange, setPendingChatsLoading]);
+
     return (
         <Modal
             title={chatSourceType === 'pending' ? "选择待审核对话" : "选择对话"}
@@ -125,16 +172,14 @@ const ChatSelectionModal: React.FC<ChatSelectionModalProps> = React.memo(({
                 columns={columns}
                 dataSource={dataSource as any}
                 rowKey="id"
+                loading={chatSourceType === 'pending' ? pendingChatsLoading : false}
                 rowSelection={{
                     selectedRowKeys: selectedChats,
                     onChange: (selectedRowKeys) => {
                         onSelectionChange(selectedRowKeys as string[]);
                     },
                 }}
-                pagination={{
-                    showSizeChanger: true,      // 显示每页条数选择器
-                    showTotal: (total) => `共 ${total} 个对话`,  // 显示总数
-                }}
+                pagination={paginationConfig}
             />
         </Modal>
     );

@@ -7,6 +7,7 @@ import { useReducer, useCallback } from 'react';
 // UI状态接口
 interface UIState {
     loading: boolean;
+    pendingChatsLoading: boolean;  // 专门的待审核对话加载状态
     modals: {
         create: boolean;
         chat: boolean;
@@ -21,6 +22,7 @@ interface UIState {
 
 const initialUIState: UIState = {
     loading: false,
+    pendingChatsLoading: false,
     modals: {
         create: false,
         chat: false,
@@ -35,6 +37,7 @@ const initialUIState: UIState = {
 
 type UIAction =
     | { type: 'SET_LOADING'; payload: boolean }
+    | { type: 'SET_PENDING_CHATS_LOADING'; payload: boolean }
     | { type: 'TOGGLE_MODAL'; payload: { modal: keyof UIState['modals']; visible: boolean } }
     | { type: 'SET_SELECTED_CHATS'; payload: string[] }
     | { type: 'SET_CHAT_SOURCE_TYPE'; payload: 'pending' | 'all' }
@@ -46,6 +49,8 @@ const uiReducer = (state: UIState, action: UIAction): UIState => {
     switch (action.type) {
         case 'SET_LOADING':
             return { ...state, loading: action.payload };
+        case 'SET_PENDING_CHATS_LOADING':
+            return { ...state, pendingChatsLoading: action.payload };
         case 'TOGGLE_MODAL':
             return {
                 ...state,
@@ -109,6 +114,13 @@ export const useTaskUI = () => {
     }, []);
 
     /**
+     * 设置待审核对话加载状态
+     */
+    const setPendingChatsLoading = useCallback((loading: boolean) => {
+        uiDispatch({ type: 'SET_PENDING_CHATS_LOADING', payload: loading });
+    }, []);
+
+    /**
      * 切换弹窗显示状态
      */
     const toggleModal = useCallback((modal: keyof UIState['modals'], visible: boolean) => {
@@ -155,6 +167,7 @@ export const useTaskUI = () => {
         uiState,
         // UI状态管理函数
         setLoading,
+        setPendingChatsLoading,
         toggleModal,
         setSelectedChats,
         setChatSourceType,

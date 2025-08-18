@@ -57,11 +57,15 @@ class TaskCRUD:
         )
         
         if task_create.assigned_to_id:
+            # 查询被分配用户的用户名
+            assigned_user = db.query(User).filter(User.id == task_create.assigned_to_id).first()
+            assigned_username = assigned_user.username if assigned_user else task_create.assigned_to_id
+            
             self._log_action(
                 db, task.id, created_by_id,
                 "assign_task",
-                f"分配任务给用户: {task_create.assigned_to_id}",
-                new_value={"assigned_to_id": task_create.assigned_to_id}
+                f"分配任务给用户: {assigned_username}",
+                new_value={"assigned_to_id": task_create.assigned_to_id, "assigned_username": assigned_username}
             )
         
         db.commit()
@@ -143,16 +147,16 @@ class TaskCRUD:
         if not task:
             return None
         
-        # 记录更新前的值
+        # 准备更新字段，记录变更前后的值用于日志
         old_values = {}
         new_values = {}
         
-        update_data = task_update.dict(exclude_unset=True)
+        update_data = task_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             if hasattr(task, field):
-                old_values[field] = getattr(task, field)
-                new_values[field] = value
-                setattr(task, field, value)
+                old_values[field] = getattr(task, field)  # 记录更新前的值
+                new_values[field] = value  # 记录新值
+                setattr(task, field, value)  # 执行更新
         
         # 记录日志
         if old_values:
@@ -184,13 +188,23 @@ class TaskCRUD:
         task.assigned_to_id = assigned_to_id
         task.status = TaskStatus.ASSIGNED
         
+        # 查询新分配用户的用户名
+        assigned_user = db.query(User).filter(User.id == assigned_to_id).first()
+        assigned_username = assigned_user.username if assigned_user else assigned_to_id
+        
+        # 查询原分配用户的用户名（如果有的话）
+        old_username = None
+        if old_assigned_to:
+            old_user = db.query(User).filter(User.id == old_assigned_to).first()
+            old_username = old_user.username if old_user else old_assigned_to
+        
         # 记录日志
         self._log_action(
             db, task_id, assigned_by_id,
             "assign_task",
-            f"分配任务给用户: {assigned_to_id}",
-            old_value={"assigned_to_id": old_assigned_to},
-            new_value={"assigned_to_id": assigned_to_id}
+            f"分配任务给用户: {assigned_username}",
+            old_value={"assigned_to_id": old_assigned_to, "old_username": old_username},
+            new_value={"assigned_to_id": assigned_to_id, "assigned_username": assigned_username}
         )
         
         db.commit()

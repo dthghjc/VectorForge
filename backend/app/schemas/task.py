@@ -150,14 +150,21 @@ class TaskQueryParams(BaseModel):
     limit: int = Field(20, ge=1, le=100)
 
 # 待审核对话 Schema
-class PendingChat(BaseModel):
+class PendingChatResponse(BaseModel):
     id: str
     title: str
-    message_count: int
-    last_message_at: datetime
-    created_at: datetime
-    user_id: str
-    username: Optional[str] = None
+    pending_message_count: int = Field(..., description="待审核消息数量")
+    last_message_at: datetime = Field(..., description="最后消息时间")
+    created_at: datetime = Field(..., description="对话创建时间")
+    user_id: str = Field(..., description="对话所属用户ID")
+    
+    class Config:
+        from_attributes = True
+
+# 分页待审核对话响应 Schema
+class PaginatedPendingChatsResponse(BaseModel):
+    total: int = Field(..., description="匹配查询的总记录数")
+    items: List[PendingChatResponse] = Field(..., description="当前页的数据列表")
     
     class Config:
         from_attributes = True 
