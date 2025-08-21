@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { ConfigProvider, Flex, Layout, Typography, Space } from 'antd';
+import { ConfigProvider, Layout, Typography, Space } from 'antd';
 import { TagOutlined } from '@ant-design/icons';
-import TaskTable from '../../components/annotation/TaskTable';
+import ChatTable from '../../components/annotation/ChatTable';
 import AnnotationModal from '../../components/annotation/AnnotationModal';
-import { mockTasks } from '../../data/mockData';
+import { mockChatListItems } from '../../data/mockData';
 import { theme } from '../../components/annotation/theme';
-import type { AnnotationTask } from '../../components/annotation/types.ts';
+import type { ChatListItem, Chat } from '../../components/annotation/types.ts';
 
 const { Header, Footer, Content } = Layout;
 const { Title } = Typography;
@@ -68,14 +68,14 @@ const layoutStyle: React.CSSProperties = {
 function Annotation() {
   // ========== 状态管理 ==========
   
-  /** 任务列表数据 - 包含所有标注任务 */
-  const [tasks, setTasks] = useState<AnnotationTask[]>(mockTasks);
+  /** Chat列表数据 - 包含所有待标注的对话 */
+  const [chatItems, setChatItems] = useState<ChatListItem[]>(mockChatListItems);
   
-  /** 当前正在标注的任务 */
-  const [currentTask, setCurrentTask] = useState<AnnotationTask | null>(null);
+  /** 当前正在标注的Chat */
+  const [currentChatItem, setCurrentChatItem] = useState<ChatListItem | null>(null);
   
-  /** 当前任务在任务列表中的索引位置 */
-  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
+  /** 当前Chat在列表中的索引位置 */
+  const [currentChatIndex, setCurrentChatIndex] = useState(0);
   
   /** 标注模态框的显示状态 */
   const [modalVisible, setModalVisible] = useState(false);
@@ -83,40 +83,40 @@ function Annotation() {
   /** 搜索文本内容 */
   const [searchText, setSearchText] = useState('');
   
-  /** 任务状态筛选条件 */
+  /** 标注状态筛选条件 */
   const [statusFilter, setStatusFilter] = useState<string>('');
 
   // ========== 数据计算 ==========
   
   /**
-   * 过滤后的任务列表
+   * 过滤后的Chat列表
    * 根据搜索文本和状态筛选条件动态计算
    */
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
-      // 搜索匹配逻辑：任务ID、对话预览、标注员姓名
+  const filteredChatItems = useMemo(() => {
+    return chatItems.filter(chatItem => {
+      // 搜索匹配逻辑：对话标题、任务名称、任务描述
       const matchesSearch = !searchText || 
-        task.id.toLowerCase().includes(searchText.toLowerCase()) ||
-        task.dialoguePreview.toLowerCase().includes(searchText.toLowerCase()) ||
-        task.annotator.toLowerCase().includes(searchText.toLowerCase());
+        chatItem.chat.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        chatItem.task.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        chatItem.task.description.toLowerCase().includes(searchText.toLowerCase());
       
       // 状态筛选逻辑
-      const matchesStatus = !statusFilter || task.status === statusFilter;
+      const matchesStatus = !statusFilter || chatItem.chat.annotationStatus === statusFilter;
       
       return matchesSearch && matchesStatus;
     });
-  }, [tasks, searchText, statusFilter]);
+  }, [chatItems, searchText, statusFilter]);
 
   // ========== 事件处理函数 ==========
   
   /**
-   * 开始标注任务
-   * @param task - 要标注的任务对象
+   * 开始标注Chat
+   * @param chatItem - 要标注的ChatListItem对象
    */
-  const handleAnnotate = (task: AnnotationTask) => {
-    setCurrentTask(task);
-    // 在原始任务列表中查找索引位置，用于任务间切换
-    setCurrentTaskIndex(tasks.findIndex(t => t.id === task.id));
+  const handleAnnotate = (chatItem: ChatListItem) => {
+    setCurrentChatItem(chatItem);
+    // 在原始Chat列表中查找索引位置，用于Chat间切换
+    setCurrentChatIndex(chatItems.findIndex(item => item.chat.id === chatItem.chat.id));
     setModalVisible(true);
   };
 
@@ -125,60 +125,68 @@ function Annotation() {
    */
   const handleModalClose = () => {
     setModalVisible(false);
-    setCurrentTask(null);
+    setCurrentChatItem(null);
   };
 
   /**
    * 保存标注结果
-   * @param updatedTask - 更新后的任务对象
+   * @param updatedChat - 更新后的Chat对象
    */
-  const handleSave = (updatedTask: AnnotationTask) => {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === updatedTask.id 
+  const handleSave = (updatedChat: Chat) => {
+    setChatItems(prevChatItems => 
+      prevChatItems.map(chatItem => 
+        chatItem.chat.id === updatedChat.id 
           ? { 
-              ...updatedTask, 
-              status: 'annotated' as const, // 标记为已标注状态
-              lastUpdate: new Date().toLocaleString() // 更新时间戳
+              ...chatItem,
+              chat: {
+                ...updatedChat, 
+                annotationStatus: 'completed' as const, // 标记为已完成状态
+                createdAt: new Date().toISOString() // 更新时间戳
+              }
             }
-          : task
+          : chatItem
       )
     );
-    // 同步更新当前任务状态
-    setCurrentTask(updatedTask);
-  };
-
-  /**
-   * 切换到下一个任务
-   * 在标注模态框中快速切换任务
-   */
-  const handleNext = () => {
-    if (currentTaskIndex < tasks.length - 1) {
-      const nextIndex = currentTaskIndex + 1;
-      setCurrentTaskIndex(nextIndex);
-      setCurrentTask(tasks[nextIndex]);
+    // 同步更新当前Chat状态
+    if (currentChatItem) {
+      setCurrentChatItem({
+        ...currentChatItem,
+        chat: updatedChat
+      });
     }
   };
 
   /**
-   * 切换到上一个任务
-   * 在标注模态框中快速切换任务
+   * 切换到下一个Chat
+   * 在标注模态框中快速切换Chat
+   */
+  const handleNext = () => {
+    if (currentChatIndex < chatItems.length - 1) {
+      const nextIndex = currentChatIndex + 1;
+      setCurrentChatIndex(nextIndex);
+      setCurrentChatItem(chatItems[nextIndex]);
+    }
+  };
+
+  /**
+   * 切换到上一个Chat
+   * 在标注模态框中快速切换Chat
    */
   const handlePrevious = () => {
-    if (currentTaskIndex > 0) {
-      const prevIndex = currentTaskIndex - 1;
-      setCurrentTaskIndex(prevIndex);
-      setCurrentTask(tasks[prevIndex]);
+    if (currentChatIndex > 0) {
+      const prevIndex = currentChatIndex - 1;
+      setCurrentChatIndex(prevIndex);
+      setCurrentChatItem(chatItems[prevIndex]);
     }
   };
 
   // ========== 导航状态计算 ==========
   
-  /** 是否可以切换到下一个任务 */
-  const hasNext = currentTaskIndex < tasks.length - 1;
+  /** 是否可以切换到下一个Chat */
+  const hasNext = currentChatIndex < chatItems.length - 1;
   
-  /** 是否可以切换到上一个任务 */
-  const hasPrevious = currentTaskIndex > 0;
+  /** 是否可以切换到上一个Chat */
+  const hasPrevious = currentChatIndex > 0;
 
   // ========== 页面渲染 ==========
   
@@ -199,9 +207,9 @@ function Annotation() {
         
         {/* 主要内容区域 */}
         <Content style={contentStyle}>
-          {/* 任务列表表格 */}
-          <TaskTable
-            tasks={filteredTasks}
+          {/* Chat列表表格 */}
+          <ChatTable
+            chatItems={filteredChatItems}
             onAnnotate={handleAnnotate}
             searchText={searchText}
             onSearchChange={setSearchText}
@@ -214,17 +222,64 @@ function Annotation() {
         <Footer style={footerStyle}>VectorForge</Footer>
         
         {/* 标注工作模态框 */}
-        <AnnotationModal
-          visible={modalVisible}
-          task={currentTask}
-          allTasks={tasks}
-          onClose={handleModalClose}
-          onSave={handleSave}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-          hasNext={hasNext}
-          hasPrevious={hasPrevious}
-        />
+        {currentChatItem && (
+          <AnnotationModal
+            visible={modalVisible}
+            task={{
+              id: currentChatItem.chat.id,
+              dialoguePreview: `${currentChatItem.chat.title} - ${currentChatItem.task.title}`,
+              status: 'pending',
+              llmModel: currentChatItem.chat.llmModel,
+              ragEnabled: currentChatItem.chat.ragEnabled,
+              annotator: currentChatItem.chat.annotator,
+              lastUpdate: currentChatItem.chat.createdAt,
+              dialogue: currentChatItem.chat.dialogue,
+              intentCategory: currentChatItem.chat.intentCategory,
+              completeness: currentChatItem.chat.completeness,
+              overallSatisfaction: currentChatItem.chat.overallSatisfaction,
+              generalNotes: currentChatItem.chat.generalNotes
+            }}
+            allTasks={chatItems.map(item => ({
+              id: item.chat.id,
+              dialoguePreview: `${item.chat.title} - ${item.task.title}`,
+              status: 'pending',
+              llmModel: item.chat.llmModel,
+              ragEnabled: item.chat.ragEnabled,
+              annotator: item.chat.annotator,
+              lastUpdate: item.chat.createdAt,
+              dialogue: item.chat.dialogue,
+              intentCategory: item.chat.intentCategory,
+              completeness: item.chat.completeness,
+              overallSatisfaction: item.chat.overallSatisfaction,
+              generalNotes: item.chat.generalNotes
+            }))}
+            onClose={handleModalClose}
+            onSave={(updatedTask) => {
+              // 将AnnotationTask转换回Chat格式
+              const updatedChat: Chat = {
+                id: updatedTask.id,
+                title: currentChatItem.chat.title,
+                taskId: currentChatItem.chat.taskId,
+                messageCount: currentChatItem.chat.messageCount,
+                createdAt: updatedTask.lastUpdate,
+                annotationStatus: 'completed',
+                llmModel: updatedTask.llmModel,
+                ragEnabled: updatedTask.ragEnabled,
+                annotator: updatedTask.annotator,
+                dialogue: updatedTask.dialogue,
+                intentCategory: updatedTask.intentCategory,
+                completeness: updatedTask.completeness,
+                overallSatisfaction: updatedTask.overallSatisfaction,
+                generalNotes: updatedTask.generalNotes
+              };
+              handleSave(updatedChat);
+            }}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            hasNext={hasNext}
+            hasPrevious={hasPrevious}
+          />
+        )}
       </Layout>
     </ConfigProvider>
   );

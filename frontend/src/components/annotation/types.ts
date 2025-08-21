@@ -160,8 +160,108 @@ export interface DialogueTurn {
 }
 
 /**
- * 标注任务完整数据结构
- * 包含整个对话的标注信息和元数据
+ * 管理员分配的标注任务
+ * 一个任务可以包含多个对话(Chat)
+ */
+export interface Task {
+    /** 任务唯一标识符 */
+    id: string;
+
+    /** 任务标题 */
+    title: string;
+
+    /** 任务描述 */
+    description: string;
+
+    /** 任务创建时间 */
+    createdAt: string;
+
+    /** 任务创建者 */
+    createdBy: string;
+
+    /** 任务状态
+     * active: 活跃
+     * completed: 已完成
+     * paused: 已暂停
+     */
+    status: 'active' | 'completed' | 'paused';
+}
+
+/**
+ * Chat对话数据结构
+ * 每个Chat属于一个Task，是实际的标注对象
+ */
+export interface Chat {
+    /** Chat唯一标识符 */
+    id: string;
+
+    /** Chat标题 */
+    title: string;
+
+    /** 所属任务ID */
+    taskId: string;
+
+    /** 消息数量 */
+    messageCount: number;
+
+    /** 创建时间 */
+    createdAt: string;
+
+    /** 标注状态
+     * pending: 待标注
+     * completed: 已完成
+     * skipped: 已跳过
+     */
+    annotationStatus: 'pending' | 'completed' | 'skipped';
+
+    /** 使用的LLM模型名称 */
+    llmModel: string;
+
+    /** 是否启用RAG功能 */
+    ragEnabled: boolean;
+
+    /** 分配的标注员姓名 */
+    annotator: string;
+
+    /** 完整对话内容 */
+    dialogue: DialogueTurn[];
+
+    /** 对话意图分类
+     * information_query：信息查询
+     * instruction_following：指令遵循
+     * content_creation：内容创作
+     * chat：闲聊
+     */
+    intentCategory: 'information_query' | 'instruction_following' | 'content_creation' | 'chat' | '';
+
+    /** 对话完整性评估
+     * complete: 完整
+     * incomplete: 不完整
+     */
+    completeness: 'complete' | 'incomplete' | '';
+
+    /** 整体满意度评分(1-5星) */
+    overallSatisfaction: number;
+    
+    /** 一般备注 */
+    generalNotes: string;
+}
+
+/**
+ * Chat列表显示项
+ * 包含Task信息和Chat信息的组合数据
+ */
+export interface ChatListItem {
+    /** Chat信息 */
+    chat: Chat;
+    
+    /** 关联的Task信息 */
+    task: Task;
+}
+
+/**
+ * 向后兼容：保持原有的AnnotationTask接口
+ * @deprecated 请使用 Chat 和 Task 接口
  */
 export interface AnnotationTask {
     /** 任务唯一标识符 */
