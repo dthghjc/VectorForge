@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, Tag, Button, Space, Input, Select, Tooltip } from 'antd';
 import { SearchOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { ChatListItem } from './types';
+import type { ChatListItem, TaskPriority } from './types';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -38,8 +38,21 @@ const annotationStatusMap = {
   pending: { color: 'orange', text: '待标注' },
   /** 已完成状态 - 绿色标签 */
   completed: { color: 'green', text: '已完成' },
-  /** 已跳过状态 - 灰色标签 */
-  skipped: { color: 'default', text: '已跳过' },
+};
+
+/**
+ * 任务优先级映射配置
+ * 定义每种优先级对应的显示样式和文本
+ */
+const priorityMap: Record<TaskPriority, { color: string; text: string }> = {
+  /** 低优先级 - 蓝色标签 */
+  low: { color: 'blue', text: '低' },
+  /** 普通优先级 - 默认标签 */
+  normal: { color: 'default', text: '普通' },
+  /** 高优先级 - 橙色标签 */
+  high: { color: 'orange', text: '高' },
+  /** 紧急优先级 - 红色标签 */
+  urgent: { color: 'red', text: '紧急' },
 };
 
 /**
@@ -49,7 +62,50 @@ const annotationStatusMap = {
  */
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+/**
+ * 格式化截止时间显示
+ * @param deadlineStr - 截止时间字符串
+ * @returns 格式化后的截止时间，包含颜色状态
+ */
+const formatDeadline = (deadlineStr: string): { text: string; isOverdue: boolean; isUrgent: boolean } => {
+  try {
+    // 确保时间字符串格式正确
+    if (!deadlineStr) {
+      return { text: '未设置', isOverdue: false, isUrgent: false };
+    }
+    
+    const deadline = new Date(deadlineStr);
+    const now = new Date();
+    
+    // 检查日期是否有效
+    if (isNaN(deadline.getTime())) {
+      console.warn('Invalid deadline format:', deadlineStr);
+      return { text: '格式错误', isOverdue: false, isUrgent: false };
+    }
+    
+    const timeDiff = deadline.getTime() - now.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    // 使用与最后更新时间相同的格式
+    const text = formatDate(deadlineStr);
+    const isOverdue = timeDiff < 0;
+    const isUrgent = daysDiff <= 2 && daysDiff > 0; // 2天内到期但未过期
+    
+    return { text, isOverdue, isUrgent };
+  } catch (error) {
+    console.error('Error formatting deadline:', error, deadlineStr);
+    return { text: '解析错误', isOverdue: false, isUrgent: false };
+  }
 };
 
 /**
@@ -77,7 +133,7 @@ const ChatTable: React.FC<ChatTableProps> = ({
     {
       title: '对话标题',
       key: 'chatTitle',
-      width: 200,
+      width: 140,
       fixed: 'left', // 固定在左侧，防止横向滚动时丢失
       render: (_, record) => (
         <Tooltip title={record.chat.title} placement="topLeft">
@@ -85,7 +141,7 @@ const ChatTable: React.FC<ChatTableProps> = ({
             overflow: 'hidden', 
             textOverflow: 'ellipsis', 
             whiteSpace: 'nowrap',
-            maxWidth: '180px'
+            maxWidth: '120px'
           }}>
             {record.chat.title}
           </div>
@@ -93,15 +149,15 @@ const ChatTable: React.FC<ChatTableProps> = ({
       ),
     },
     {
-      title: '任务名称',
+      title: '任务标题',
       key: 'taskTitle',
-      width: 150,
+      width: 130,
       render: (_, record) => (
         <div style={{ 
           overflow: 'hidden', 
           textOverflow: 'ellipsis', 
           whiteSpace: 'nowrap',
-          maxWidth: '130px'
+          maxWidth: '110px'
         }}>
           {record.task.title}
         </div>
@@ -110,14 +166,14 @@ const ChatTable: React.FC<ChatTableProps> = ({
     {
       title: '任务描述',
       key: 'taskDescription',
-      width: 250,
+      width: 180,
       render: (_, record) => (
         <Tooltip title={record.task.description} placement="topLeft">
           <div style={{ 
             overflow: 'hidden', 
             textOverflow: 'ellipsis', 
             whiteSpace: 'nowrap',
-            maxWidth: '230px'
+            maxWidth: '160px'
           }}>
             {record.task.description}
           </div>
@@ -127,15 +183,53 @@ const ChatTable: React.FC<ChatTableProps> = ({
     {
       title: '消息数量',
       key: 'messageCount',
-      width: 100,
+      width: 90,
       align: 'center',
       render: (_, record) => `${record.chat.messageCount} 条`,
     },
     {
+      title: '优先级',
+      key: 'priority',
+      width: 80,
+      align: 'center',
+      render: (_, record) => {
+        const priorityConfig = priorityMap[record.task.priority];
+        return (
+          <Tag color={priorityConfig.color}>
+            {priorityConfig.text}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: '截止时间',
+      key: 'deadline',
+      width: 130,
+      align: 'center',
+      render: (_, record) => {
+        const { text, isOverdue, isUrgent } = formatDeadline(record.task.deadline);
+        return (
+          <span 
+            style={{ 
+              fontSize: '12px',
+              color: isOverdue ? '#ff4d4f' : isUrgent ? '#fa8c16' : '#595959',
+              fontWeight: isOverdue || isUrgent ? 'bold' : 'normal'
+            }}
+          >
+            {text}
+          </span>
+        );
+      },
+    },
+    {
       title: '最后更新时间',
       key: 'createdAt',
-      width: 150,
-      render: (_, record) => formatDate(record.chat.createdAt),
+      width: 130,
+      render: (_, record) => (
+        <span style={{ fontSize: '12px' }}>
+          {formatDate(record.chat.createdAt)}
+        </span>
+      ),
     },
     {
       title: '状态',
@@ -163,11 +257,9 @@ const ChatTable: React.FC<ChatTableProps> = ({
           size="small"
           icon={<EditOutlined />}
           onClick={() => onAnnotate(record)}
-          disabled={record.chat.annotationStatus === 'skipped'} // 已跳过的不能编辑
         >
           {/* 根据Chat状态显示不同的按钮文本 */}
-          {record.chat.annotationStatus === 'pending' ? '开始标注' : 
-           record.chat.annotationStatus === 'completed' ? '查看编辑' : '已跳过'}
+          {record.chat.annotationStatus === 'pending' ? '开始标注' : '查看编辑'}
         </Button>
       ),
     },
@@ -187,9 +279,9 @@ const ChatTable: React.FC<ChatTableProps> = ({
       {/* 表格头部工具栏 */}
       <div className="table-header" style={{ marginBottom: 16 }}>
         <Space size="middle">
-          {/* 搜索框 - 支持对话标题、任务名称搜索 */}
+          {/* 搜索框 - 支持对话标题、任务标题搜索 */}
           <Search
-            placeholder="搜索对话标题或任务名称"
+            placeholder="搜索对话标题或任务标题"
             allowClear
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -206,7 +298,6 @@ const ChatTable: React.FC<ChatTableProps> = ({
           >
             <Option value="pending">待标注</Option>
             <Option value="completed">已完成</Option>
-            <Option value="skipped">已跳过</Option>
           </Select>
         </Space>
       </div>

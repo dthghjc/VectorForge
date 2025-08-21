@@ -94,7 +94,7 @@ function Annotation() {
    */
   const filteredChatItems = useMemo(() => {
     return chatItems.filter(chatItem => {
-      // 搜索匹配逻辑：对话标题、任务名称、任务描述
+      // 搜索匹配逻辑：对话标题、任务标题、任务描述
       const matchesSearch = !searchText || 
         chatItem.chat.title.toLowerCase().includes(searchText.toLowerCase()) ||
         chatItem.task.title.toLowerCase().includes(searchText.toLowerCase()) ||

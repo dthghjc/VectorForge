@@ -160,6 +160,11 @@ export interface DialogueTurn {
 }
 
 /**
+ * 任务优先级枚举
+ */
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+/**
  * 管理员分配的标注任务
  * 一个任务可以包含多个对话(Chat)
  */
@@ -172,6 +177,12 @@ export interface Task {
 
     /** 任务描述 */
     description: string;
+
+    /** 任务优先级 */
+    priority: TaskPriority;
+
+    /** 任务截止时间 */
+    deadline: string;
 
     /** 任务创建时间 */
     createdAt: string;
@@ -210,9 +221,8 @@ export interface Chat {
     /** 标注状态
      * pending: 待标注
      * completed: 已完成
-     * skipped: 已跳过
      */
-    annotationStatus: 'pending' | 'completed' | 'skipped';
+    annotationStatus: 'pending' | 'completed';
 
     /** 使用的LLM模型名称 */
     llmModel: string;
