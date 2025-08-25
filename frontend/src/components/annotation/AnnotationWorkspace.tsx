@@ -222,9 +222,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
           <Space>
             <MessageOutlined />
             消息 {index + 1}
-            {message.audits?.some(audit => audit.status === 'approved') && (
-              <CheckCircleOutlined style={{ color: '#52c41a' }} />
-            )}
+
           </Space>
         ),
         children: (
@@ -243,7 +241,6 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             <div style={{ flex: '1 1 50%', minWidth: '400px' }}>
               <MessageAnnotationPanel 
                 message={message}
-                taskChatDetail={taskChatDetail}
                 style={{ height: '100%' }}
               />
             </div>
@@ -284,11 +281,20 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             >
               下一个
             </Button>
+            <Button
+              icon={<CloseOutlined />}
+              onClick={handleClose}
+              size="small"
+              type="text"
+            >
+              关闭
+            </Button>
           </Space>
         </div>
       }
       open={visible}
       onCancel={handleClose}
+      closable={false}
       width="90%"
       style={{ maxWidth: '1400px' }}
       styles={{ body: { padding: '20px' } }}

@@ -38,8 +38,7 @@ const statusMap = {
   pending: { color: 'orange', text: '待标注' },
   /** 已标注状态 - 蓝色标签 */
   annotated: { color: 'blue', text: '已标注' },
-  /** 审核中状态 - 紫色标签 */
-  reviewing: { color: 'purple', text: '审核中' },
+
   /** 已通过状态 - 绿色标签 */
   approved: { color: 'green', text: '已通过' },
   /** 已驳回状态 - 红色标签 */
@@ -175,7 +174,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
           >
             <Option value="pending">待标注</Option>
             <Option value="annotated">已标注</Option>
-            <Option value="reviewing">审核中</Option>
+
             <Option value="approved">已通过</Option>
             <Option value="rejected">已驳回</Option>
           </Select>

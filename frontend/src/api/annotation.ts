@@ -9,8 +9,7 @@ import type {
   TaskChatListItem,
   TaskChatDetail,
   ChatAnnotationSubmit,
-  MessageAuditSubmit,
-  MessageAudit,
+
   TaskChat
 } from '../types/annotation';
 
@@ -125,24 +124,7 @@ export const annotateChat = (
   return post(`/api/v1/tasks/${taskId}/chats/${taskChatId}/annotate`, annotationData).then(res => res.data);
 };
 
-// ============= Message 审核相关 API =============
 
-/**
- * 审核消息（Message 级别）
- */
-export const auditMessage = (
-  messageId: string,
-  auditData: MessageAuditSubmit
-): Promise<MessageAudit> => {
-  return post(`/api/v1/audit/messages/${messageId}/audit`, auditData).then(res => res.data);
-};
-
-/**
- * 获取消息的审核记录
- */
-export const getMessageAudits = (messageId: string): Promise<MessageAudit[]> => {
-  return get(`/api/v1/audit/messages/${messageId}/audits`).then(res => res.data);
-};
 
 // ============= 批量操作 API =============
 
@@ -159,17 +141,7 @@ export const batchAnnotateChats = (
   return post(`/api/v1/tasks/${taskId}/chats/batch-annotate`, { annotations }).then(res => res.data);
 };
 
-/**
- * 批量审核消息
- */
-export const batchAuditMessages = (
-  audits: Array<{
-    message_id: string;
-    audit_data: MessageAuditSubmit;
-  }>
-): Promise<MessageAudit[]> => {
-  return post('/api/v1/audit/messages/batch-audit', { audits }).then(res => res.data);
-};
+
 
 // ============= 统计和搜索 API =============
 

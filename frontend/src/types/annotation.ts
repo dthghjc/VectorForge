@@ -50,7 +50,7 @@ export interface Message {
   content: string;
   chat_id: string;
   meta_data?: Record<string, any>;
-  audit_status: 'pending' | 'approved' | 'rejected';
+
   is_flagged: '0' | '1';
   created_at: string;
   updated_at: string;
@@ -76,7 +76,7 @@ export interface ChatAnnotationData {
 }
 
 /**
- * Message 级别标注数据（存储在 MessageAudit.annotation_data JSON 字段）
+ * Message 级别标注数据
  */
 export interface MessageAnnotationData {
   // LLM回复质量评估
@@ -145,36 +145,13 @@ export interface TaskChat {
   annotation_data?: ChatAnnotationData;
 }
 
-/**
- * 消息审核记录（对应后端 MessageAudit 模型）
- */
-export interface MessageAudit {
-  id: string;
-  message_id: string;
-  annotator_id: string;
-  status: 'pending' | 'approved' | 'rejected';
-  comment?: string;
-  created_at: string;
-  updated_at: string;
-  
-  // Message 级别标注数据 JSON
-  annotation_data?: MessageAnnotationData;
-}
-
 // ============= 组合视图模型 =============
-
-/**
- * 带消息审核的消息
- */
-export interface MessageWithAudits extends Message {
-  audits: MessageAudit[];
-}
 
 /**
  * 带消息的对话
  */
 export interface ChatWithMessages extends Chat {
-  messages: MessageWithAudits[];
+  messages: Message[];
   message_count?: number;
 }
 
@@ -229,9 +206,7 @@ export interface ChatAnnotationForm extends ChatAnnotationData {
  * Message 标注表单数据
  */
 export interface MessageAnnotationForm extends MessageAnnotationData {
-  // 表单额外字段
-  audit_status: 'approved' | 'rejected';
-  audit_comment: string;
+
 }
 
 // ============= API 请求/响应模型 =============
@@ -245,14 +220,7 @@ export interface ChatAnnotationSubmit {
   annotation_data: ChatAnnotationData;
 }
 
-/**
- * Message 审核提交数据
- */
-export interface MessageAuditSubmit {
-  status: 'approved' | 'rejected';
-  comment?: string;
-  annotation_data: MessageAnnotationData;
-}
+
 
 // ============= 选项配置 =============
 

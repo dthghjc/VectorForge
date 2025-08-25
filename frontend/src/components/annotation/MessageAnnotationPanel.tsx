@@ -19,20 +19,18 @@ import {
   message as antMessage
 } from 'antd';
 import { 
-  MessageOutlined, 
   RobotOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import type { 
-  MessageWithAudits, 
-  TaskChatDetail, 
+  Message, 
   MessageAnnotationForm 
 } from '../../types/annotation';
 import { TONE_AND_STYLE_OPTIONS, VIOLATION_TYPE_OPTIONS } from '../../types/annotation';
-import { auditMessage } from '../../api/annotation';
 
-const { Title, Text } = Typography;
+
+const { Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -40,9 +38,7 @@ const { Option } = Select;
 
 interface MessageAnnotationPanelProps {
   /** 要标注的消息 */
-  message: MessageWithAudits;
-  /** TaskChat 详情（用于上下文） */
-  taskChatDetail: TaskChatDetail;
+  message: Message;
   /** 自定义样式 */
   style?: React.CSSProperties;
 }
@@ -88,7 +84,6 @@ const INSTRUCTION_FOLLOWING_OPTIONS = [
 
 const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
   message,
-  taskChatDetail,
   style,
 }) => {
   
@@ -108,29 +103,20 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
     hallucination_details: '',
     improvement_suggestion: '',
     rewrite: '',
-    audit_status: 'approved',
-    audit_comment: '',
+
   });
 
   // ============= 初始化表单 =============
 
   useEffect(() => {
     // 从现有审核记录初始化表单
-    const latestAudit = message.audits?.[0];
-    if (latestAudit?.annotation_data) {
-      const initData: MessageAnnotationForm = {
-        ...latestAudit.annotation_data,
-        audit_status: latestAudit.status === 'rejected' ? 'rejected' : 'approved',
-        audit_comment: latestAudit.comment || '',
-      };
-      setFormData(initData);
-      form.setFieldsValue(initData);
-    } else {
+    // 消息级别标注无需初始化
+    {
       // 使用默认值
       setFormData(formData);
       form.setFieldsValue(formData);
     }
-  }, [message.id, message.audits, form]);
+  }, [message.id, form]);
 
   // ============= 表单处理 =============
 
@@ -142,7 +128,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
   };
 
   /**
-   * 保存消息审核
+   * 保存消息标注
    */
   const handleSave = async () => {
     try {
@@ -152,21 +138,16 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
       await form.validateFields();
       const values = form.getFieldsValue();
       
-      // 提取审核数据
-      const { audit_status, audit_comment, ...annotation_data } = values;
+      console.log('保存消息标注数据:', values);
       
-      // 提交审核
-      await auditMessage(message.id, {
-        status: audit_status,
-        comment: audit_comment,
-        annotation_data,
-      });
+      // TODO: 实现消息级别标注保存逻辑
+      // 目前只在本地保存，需要配合后端API实现
       
-      antMessage.success('消息审核保存成功');
+      antMessage.success('消息标注保存成功');
       
     } catch (error) {
-      console.error('保存消息审核失败:', error);
-      antMessage.error('保存消息审核失败');
+      console.error('保存消息标注失败:', error);
+      antMessage.error('保存消息标注失败');
     } finally {
       setSaving(false);
     }
@@ -175,8 +156,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
   // ============= 渲染辅助 =============
 
   const isAssistantMessage = message.role === 'assistant';
-  const latestAudit = message.audits?.[0];
-  const isCompleted = latestAudit && latestAudit.status !== 'pending';
+  const isCompleted = false; // TODO: 需要根据实际标注状态判断
 
   return (
     <div style={{ ...style, overflow: 'auto' }}>
@@ -198,7 +178,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
             loading={saving}
             onClick={handleSave}
           >
-            保存审核
+保存标注
           </Button>
         }
       >
@@ -211,13 +191,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
                 {message.role === 'user' ? '👤 用户' : '🤖 AI助手'}
               </span>
             </div>
-            <div style={{ marginBottom: '8px' }}>
-              <Text type="secondary">审核状态:</Text>
-              <span style={{ marginLeft: '8px' }}>
-                {message.audit_status === 'approved' ? '✅ 已通过' : 
-                 message.audit_status === 'rejected' ? '❌ 已拒绝' : '⏳ 待审核'}
-              </span>
-            </div>
+
             <div>
               <Text type="secondary">消息长度:</Text>
               <span style={{ marginLeft: '8px' }}>{message.content.length} 字符</span>
@@ -394,36 +368,43 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
                 <Switch />
               </Form.Item>
 
-              <Form.Item
-                name="instruction_following_rating"
-                label="指令遵循度"
-                dependencies={['is_instruction_following']}
-              >
+              <Form.Item shouldUpdate={(prevValues, currentValues) => 
+                prevValues.is_instruction_following !== currentValues.is_instruction_following
+              }>
                 {({ getFieldValue }) => 
                   getFieldValue('is_instruction_following') ? (
-                    <Select placeholder="请选择指令遵循度">
-                      {INSTRUCTION_FOLLOWING_OPTIONS.map(option => (
-                        <Option key={option.value} value={option.value}>
-                          {option.label}
-                        </Option>
-                      ))}
-                    </Select>
+                    <Form.Item
+                      name="instruction_following_rating"
+                      label="指令遵循度"
+                    >
+                      <Select placeholder="请选择指令遵循度">
+                        {INSTRUCTION_FOLLOWING_OPTIONS.map(option => (
+                          <Option key={option.value} value={option.value}>
+                            {option.label}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
                   ) : null
                 }
               </Form.Item>
 
-              <Form.Item
-                name="instruction_following_details"
-                label="指令遵循详情"
-                dependencies={['is_instruction_following']}
-              >
+              <Form.Item shouldUpdate={(prevValues, currentValues) => 
+                prevValues.is_instruction_following !== currentValues.is_instruction_following
+              }>
                 {({ getFieldValue }) => 
                   getFieldValue('is_instruction_following') ? (
-                    <TextArea
-                      rows={2}
-                      placeholder="请详细描述指令遵循情况..."
-                      maxLength={500}
-                    />
+                    <Form.Item
+                      name="instruction_following_details"
+                      label="指令遵循详情"
+                    >
+                      <TextArea
+                        rows={2}
+                        placeholder="请详细描述指令遵循情况..."
+                        maxLength={500}
+                        showCount
+                      />
+                    </Form.Item>
                   ) : null
                 }
               </Form.Item>
@@ -458,32 +439,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
             />
           </Form.Item>
 
-          <Divider style={{ margin: '16px 0' }} />
 
-          {/* 审核结果 */}
-          <Form.Item
-            name="audit_status"
-            label={<strong>审核结果</strong>}
-            rules={[{ required: true, message: '请选择审核结果' }]}
-          >
-            <Radio.Group>
-              <Radio value="approved">✅ 通过</Radio>
-              <Radio value="rejected">❌ 拒绝</Radio>
-            </Radio.Group>
-          </Form.Item>
-
-          {/* 审核备注 */}
-          <Form.Item
-            name="audit_comment"
-            label={<strong>审核备注</strong>}
-          >
-            <TextArea
-              rows={2}
-              placeholder="请说明审核结果的原因..."
-              maxLength={500}
-              showCount
-            />
-          </Form.Item>
         </Form>
       </Card>
     </div>

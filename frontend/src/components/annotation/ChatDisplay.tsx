@@ -40,8 +40,7 @@ const ChatDisplay: React.FC<ChatDisplayProps> = ({
   const renderMessage = (message: any, index: number) => {
     const isUser = message.role === 'user';
     const isHighlighted = message.id === highlightMessageId;
-    const hasAudits = message.audits && message.audits.length > 0;
-    const latestAudit = hasAudits ? message.audits[0] : null;
+
     
     return (
       <div
@@ -79,20 +78,7 @@ const ChatDisplay: React.FC<ChatDisplayProps> = ({
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
-            {/* 审核状态 */}
-            {!isUser && (
-              <>
-                {message.audit_status === 'approved' && (
-                  <Tag color="green" size="small">已通过</Tag>
-                )}
-                {message.audit_status === 'rejected' && (
-                  <Tag color="red" size="small">已拒绝</Tag>
-                )}
-                {message.audit_status === 'pending' && (
-                  <Tag color="orange" size="small">待审核</Tag>
-                )}
-              </>
-            )}
+
             
             {/* 创建时间 */}
             <Text type="secondary" style={{ fontSize: '11px' }}>
@@ -125,30 +111,7 @@ const ChatDisplay: React.FC<ChatDisplayProps> = ({
           </Paragraph>
         </div>
 
-        {/* 审核信息（仅 AI 消息） */}
-        {!isUser && latestAudit && (
-          <div style={{ 
-            marginTop: '8px', 
-            paddingTop: '8px', 
-            borderTop: '1px solid #f0f0f0',
-            fontSize: '12px'
-          }}>
-            <Space size="small" wrap>
-              <Text type="secondary">最新审核:</Text>
-              <Tag 
-                color={latestAudit.status === 'approved' ? 'green' : 'red'}
-                size="small"
-              >
-                {latestAudit.status === 'approved' ? '通过' : '拒绝'}
-              </Tag>
-              {latestAudit.comment && (
-                <Text type="secondary" style={{ fontSize: '11px' }}>
-                  {latestAudit.comment}
-                </Text>
-              )}
-            </Space>
-          </div>
-        )}
+
 
         {/* 元数据（如果存在） */}
         {message.meta_data && Object.keys(message.meta_data).length > 0 && (

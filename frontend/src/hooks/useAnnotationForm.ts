@@ -10,8 +10,7 @@ import type {
   ChatAnnotationData,
   ChatAnnotationForm,
   MessageAnnotationData,
-  MessageAnnotationForm,
-  MessageWithAudits
+  MessageAnnotationForm
 } from '../types/annotation';
 
 // ============= 表单状态类型 =============
@@ -61,8 +60,6 @@ const getDefaultMessageAnnotationData = (): MessageAnnotationData => ({
 
 const getDefaultMessageAnnotationForm = (): MessageAnnotationForm => ({
   ...getDefaultMessageAnnotationData(),
-  audit_status: 'approved',
-  audit_comment: '',
 });
 
 // ============= Hook 实现 =============
@@ -96,14 +93,8 @@ export const useAnnotationForm = (taskChatDetail: TaskChatDetail | null) => {
     // 初始化 Message 级别表单
     const messageforms: Record<string, MessageAnnotationForm> = {};
     data.chat.messages.forEach(message => {
-      // 获取该消息最新的审核数据
-      const latestAudit = message.audits?.[0]; // 假设按时间倒序排列
-      
       messageforms[message.id] = {
         ...getDefaultMessageAnnotationForm(),
-        ...latestAudit?.annotation_data,
-        audit_status: latestAudit?.status === 'rejected' ? 'rejected' : 'approved',
-        audit_comment: latestAudit?.comment || '',
       };
     });
 
@@ -307,8 +298,7 @@ export const useAnnotationForm = (taskChatDetail: TaskChatDetail | null) => {
     const messageForm = state.messageforms[messageId];
     if (!messageForm) return getDefaultMessageAnnotationData();
 
-    const { audit_status, audit_comment, ...annotationData } = messageForm;
-    return annotationData;
+    return messageForm;
   }, [state.messageforms]);
 
   /**
@@ -321,10 +311,8 @@ export const useAnnotationForm = (taskChatDetail: TaskChatDetail | null) => {
         annotation_comment: state.chatForm.annotation_comment,
         annotation_data: extractChatAnnotationData(),
       },
-      messageAudits: Object.keys(state.messageforms).map(messageId => ({
+      messageAnnotations: Object.keys(state.messageforms).map(messageId => ({
         messageId,
-        status: state.messageforms[messageId].audit_status,
-        comment: state.messageforms[messageId].audit_comment,
         annotation_data: extractMessageAnnotationData(messageId),
       })),
     };

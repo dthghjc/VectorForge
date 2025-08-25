@@ -7,7 +7,7 @@ export interface MessageResponse {
     role: string;
     content: string;
     metadata?: Record<string, any> | null;
-    audit_status: string;
+
     is_flagged: string;
     created_at: string;
     updated_at: string;
