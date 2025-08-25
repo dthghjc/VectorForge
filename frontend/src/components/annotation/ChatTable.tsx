@@ -133,7 +133,7 @@ const ChatTable: React.FC<ChatTableProps> = ({
     {
       title: '对话标题',
       key: 'chatTitle',
-      width: 140,
+      width: 150,
       fixed: 'left', // 固定在左侧，防止横向滚动时丢失
       render: (_, record) => (
         <Tooltip title={record.chat.title} placement="topLeft">
@@ -141,7 +141,7 @@ const ChatTable: React.FC<ChatTableProps> = ({
             overflow: 'hidden', 
             textOverflow: 'ellipsis', 
             whiteSpace: 'nowrap',
-            maxWidth: '120px'
+            maxWidth: '130px'
           }}>
             {record.chat.title}
           </div>
@@ -151,29 +151,31 @@ const ChatTable: React.FC<ChatTableProps> = ({
     {
       title: '任务标题',
       key: 'taskTitle',
-      width: 130,
+      width: 150,
       render: (_, record) => (
-        <div style={{ 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          maxWidth: '110px'
-        }}>
-          {record.task.title}
-        </div>
+        <Tooltip title={record.task.title} placement="topLeft">
+          <div style={{ 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis', 
+            whiteSpace: 'nowrap',
+            maxWidth: '130px'
+          }}>
+            {record.task.title}
+          </div>
+        </Tooltip>
       ),
     },
     {
       title: '任务描述',
       key: 'taskDescription',
-      width: 180,
+      width: 150,
       render: (_, record) => (
         <Tooltip title={record.task.description} placement="topLeft">
           <div style={{ 
             overflow: 'hidden', 
             textOverflow: 'ellipsis', 
             whiteSpace: 'nowrap',
-            maxWidth: '160px'
+            maxWidth: '130px'
           }}>
             {record.task.description}
           </div>
