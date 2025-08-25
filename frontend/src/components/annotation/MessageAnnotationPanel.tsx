@@ -25,7 +25,8 @@ import {
 } from '@ant-design/icons';
 import type { 
   Message, 
-  MessageAnnotationForm 
+  MessageAnnotationForm,
+  RAGRecallData 
 } from '../../types/annotation';
 import { TONE_AND_STYLE_OPTIONS, VIOLATION_TYPE_OPTIONS } from '../../types/annotation';
 
@@ -80,6 +81,19 @@ const INSTRUCTION_FOLLOWING_OPTIONS = [
   { value: 'NO_COMPLIANCE', label: '基本未遵循' },
 ];
 
+const RAG_RELEVANCE_OPTIONS = [
+  { value: 'strong', label: '强相关', color: '#52c41a' },
+  { value: 'relevant', label: '相关', color: '#1890ff' },
+  { value: 'weak', label: '弱相关', color: '#faad14' },
+  { value: 'irrelevant', label: '不相关', color: '#ff4d4f' },
+];
+
+const RAG_SUPPORT_OPTIONS = [
+  { value: 'full', label: '完全支持', color: '#52c41a' },
+  { value: 'partial', label: '部分支持', color: '#faad14' },
+  { value: 'none', label: '不支持', color: '#ff4d4f' },
+];
+
 // ============= 主组件 =============
 
 const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
@@ -91,6 +105,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
   
   const [form] = Form.useForm<MessageAnnotationForm>();
   const [saving, setSaving] = useState(false);
+  
   const [formData, setFormData] = useState<MessageAnnotationForm>({
     relevance: '',
     fluency: '',
@@ -178,7 +193,7 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
             loading={saving}
             onClick={handleSave}
           >
-保存标注
+            保存标注
           </Button>
         }
       >
@@ -408,6 +423,149 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
                   ) : null
                 }
               </Form.Item>
+
+              <Divider style={{ margin: '16px 0' }} />
+            </>
+          )}
+
+          {/* RAG 标注（如果存在RAG数据） */}
+          {message.meta_data?.rag_recalls && Array.isArray(message.meta_data.rag_recalls) && message.meta_data.rag_recalls.length > 0 && (
+            <>
+              <Divider style={{ margin: '16px 0' }}>
+                <Text strong style={{ color: '#1890ff' }}>
+                  📚 RAG 召回片段标注
+                </Text>
+              </Divider>
+
+              {message.meta_data.rag_recalls.map((recall: any, index: number) => (
+                <Card 
+                  key={index}
+                  size="small" 
+                  style={{ marginBottom: '16px' }}
+                  title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>片段 {index + 1}</span>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        来源: {recall.source || '未知'}
+                      </Text>
+                    </div>
+                  }
+                >
+                  {/* 召回片段内容 */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>召回内容:</Text>
+                    <div style={{ 
+                      background: '#f5f5f5', 
+                      padding: '8px', 
+                      borderRadius: '4px', 
+                      marginTop: '4px',
+                      fontSize: '13px'
+                    }}>
+                      {recall.snippet || recall.content || '无内容'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* 与问题相关性 */}
+                    <Form.Item
+                      name={['rag_recalls', index, 'relevance_to_question']}
+                      label="与问题相关性"
+                      style={{ marginBottom: '12px' }}
+                    >
+                      <Radio.Group style={{ width: '100%' }}>
+                        {RAG_RELEVANCE_OPTIONS.map(option => (
+                          <Radio.Button 
+                            key={option.value} 
+                            value={option.value}
+                            style={{ fontSize: '12px' }}
+                          >
+                            {option.label}
+                          </Radio.Button>
+                        ))}
+                      </Radio.Group>
+                    </Form.Item>
+
+                    {/* 对回答支持度 */}
+                    <Form.Item
+                      name={['rag_recalls', index, 'support_to_response']}
+                      label="对回答支持度"
+                      style={{ marginBottom: '12px' }}
+                    >
+                      <Radio.Group style={{ width: '100%' }}>
+                        {RAG_SUPPORT_OPTIONS.map(option => (
+                          <Radio.Button 
+                            key={option.value} 
+                            value={option.value}
+                            style={{ fontSize: '12px' }}
+                          >
+                            {option.label}
+                          </Radio.Button>
+                        ))}
+                      </Radio.Group>
+                    </Form.Item>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* 是否有错误 */}
+                    <Form.Item
+                      name={['rag_recalls', index, 'has_error']}
+                      label="内容有错误"
+                      valuePropName="checked"
+                      style={{ marginBottom: '8px' }}
+                    >
+                      <Switch size="small" />
+                    </Form.Item>
+
+                    {/* 是否冗余 */}
+                    <Form.Item
+                      name={['rag_recalls', index, 'is_redundant']}
+                      label="内容冗余"
+                      valuePropName="checked"
+                      style={{ marginBottom: '8px' }}
+                    >
+                      <Switch size="small" />
+                    </Form.Item>
+                  </div>
+
+                  {/* 错误详情 */}
+                  <Form.Item shouldUpdate={(prevValues, currentValues) => 
+                    prevValues.rag_recalls?.[index]?.has_error !== currentValues.rag_recalls?.[index]?.has_error
+                  }>
+                    {({ getFieldValue }) => 
+                      getFieldValue(['rag_recalls', index, 'has_error']) ? (
+                        <Form.Item
+                          name={['rag_recalls', index, 'error_details']}
+                          label="错误详情"
+                          style={{ marginBottom: '8px' }}
+                        >
+                          <TextArea
+                            rows={2}
+                            placeholder="请详细描述发现的错误..."
+                            maxLength={300}
+                            showCount
+                            style={{ fontSize: '12px' }}
+                          />
+                        </Form.Item>
+                      ) : null
+                    }
+                  </Form.Item>
+
+                  {/* 改进建议 */}
+                  <Form.Item
+                    name={['rag_recalls', index, 'improvement_suggestion']}
+                    label="改进建议"
+                    style={{ marginBottom: '0' }}
+                  >
+                    <TextArea
+                      rows={2}
+                      placeholder="对该召回片段的改进建议..."
+                      maxLength={300}
+                      showCount
+                      style={{ fontSize: '12px' }}
+                    />
+                  </Form.Item>
+                </Card>
+              ))}
 
               <Divider style={{ margin: '16px 0' }} />
             </>
