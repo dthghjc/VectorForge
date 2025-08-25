@@ -227,6 +227,97 @@ class TaskCRUD:
             query = query.filter(TaskChat.annotation_status == annotation_status)
         
         return query.all()
+
+    def get_task_chats_paginated(
+        self, 
+        db: Session, 
+        task_id: str, 
+        annotation_status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 10
+    ) -> dict:
+        """
+        获取任务中的对话列表（分页优化版）
+        """
+        from sqlalchemy import func
+        from app.models.chat import Message
+        
+        # 构建基础查询
+        query = db.query(TaskChat).filter(TaskChat.task_id == task_id)
+        
+        if annotation_status:
+            query = query.filter(TaskChat.annotation_status == annotation_status)
+        
+        # 获取总数
+        total = query.count()
+        
+        # 分页查询
+        offset = (page - 1) * page_size
+        task_chats = query.options(
+            selectinload(TaskChat.chat),
+            selectinload(TaskChat.annotated_by)
+        ).order_by(TaskChat.created_at.desc()).offset(offset).limit(page_size).all()
+        
+        if not task_chats:
+            return {
+                "items": [],
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": 0
+            }
+        
+        # 批量获取消息数量（只查询当前页的chat_ids）
+        chat_ids = [tc.chat_id for tc in task_chats if tc.chat_id]
+        message_counts = {}
+        
+        if chat_ids:
+            message_counts = dict(
+                db.query(
+                    Message.chat_id,
+                    func.count(Message.id).label('message_count')
+                ).filter(
+                    Message.chat_id.in_(chat_ids)
+                ).group_by(Message.chat_id).all()
+            )
+        
+        # 添加对话信息
+        for task_chat in task_chats:
+            if task_chat.chat:
+                task_chat.chat_title = task_chat.chat.title
+                task_chat.chat_message_count = message_counts.get(task_chat.chat_id, 0)
+        
+        # 计算总页数
+        total_pages = (total + page_size - 1) // page_size
+        
+        # 转换为响应格式
+        items_response = []
+        for task_chat in task_chats:
+            item = {
+                "id": task_chat.id,
+                "task_id": task_chat.task_id,
+                "chat_id": task_chat.chat_id,
+                "annotation_status": task_chat.annotation_status,
+                "annotation_result": task_chat.annotation_result,
+                "annotation_comment": task_chat.annotation_comment,
+                "annotation_data": task_chat.annotation_data,
+                "annotated_by_id": task_chat.annotated_by_id,
+                "annotated_at": task_chat.annotated_at.isoformat() if task_chat.annotated_at else None,
+                "created_at": task_chat.created_at.isoformat() if task_chat.created_at else None,
+                "updated_at": task_chat.updated_at.isoformat() if task_chat.updated_at else None,
+                # 添加的字段
+                "chat_title": getattr(task_chat, 'chat_title', ''),
+                "chat_message_count": getattr(task_chat, 'chat_message_count', 0),
+            }
+            items_response.append(item)
+        
+        return {
+            "items": items_response,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages
+        }
     
     def annotate_chat(
         self,
@@ -288,6 +379,161 @@ class TaskCRUD:
         db.commit()
         db.refresh(task_chat)
         return task_chat
+    
+    def annotate_chat_with_data(
+        self,
+        db: Session,
+        task_chat_id: str,
+        annotation_result: str,
+        annotation_comment: Optional[str],
+        annotation_data: Optional[Dict[str, Any]],
+        annotated_by_id: str
+    ) -> Optional[TaskChat]:
+        """标注任务中的对话（支持 annotation_data JSON 字段）"""
+        task_chat = db.query(TaskChat).filter(
+            TaskChat.id == task_chat_id
+        ).first()
+        
+        if not task_chat:
+            return None
+        
+        # 更新标注信息
+        task_chat.annotation_status = "completed"
+        task_chat.annotation_result = annotation_result
+        task_chat.annotation_comment = annotation_comment
+        task_chat.annotation_data = annotation_data
+        task_chat.annotated_by_id = annotated_by_id
+        task_chat.annotated_at = get_current_beijing_time()
+        
+        # 更新任务的完成统计
+        task = db.query(AnnotationTask).filter(
+            AnnotationTask.id == task_chat.task_id
+        ).first()
+        
+        if task:
+            # 计算已完成的对话数
+            completed_count = db.query(TaskChat).filter(
+                and_(
+                    TaskChat.task_id == task.id,
+                    TaskChat.annotation_status == "completed"
+                )
+            ).count()
+            
+            task.completed_chats = completed_count
+            
+            # 如果所有对话都已完成，更新任务状态
+            if completed_count >= task.total_chats:
+                task.status = TaskStatus.COMPLETED
+            elif task.status == TaskStatus.ASSIGNED:
+                task.status = TaskStatus.IN_PROGRESS
+        
+        # 记录日志
+        self._log_action(
+            db, task_chat.task_id, annotated_by_id,
+            "annotate_chat_with_data",
+            f"完成对话标注: {annotation_result}",
+            new_value={
+                "chat_id": task_chat.chat_id,
+                "annotation_result": annotation_result,
+                "annotation_comment": annotation_comment,
+                "has_annotation_data": annotation_data is not None
+            }
+        )
+        
+        db.commit()
+        db.refresh(task_chat)
+        return task_chat
+    
+    def get_task_chat_detail(self, db: Session, task_chat_id: str) -> Optional[Dict[str, Any]]:
+        """获取 TaskChat 详情，包含关联的 Task、Chat 和 Messages 数据"""
+        from app.models.user import MessageAudit
+        
+        # 获取 TaskChat 及其关联数据
+        task_chat = db.query(TaskChat).options(
+            selectinload(TaskChat.task).selectinload(AnnotationTask.created_by),
+            selectinload(TaskChat.task).selectinload(AnnotationTask.assigned_to),
+            selectinload(TaskChat.chat).selectinload(Chat.messages).selectinload(Message.audits)
+        ).filter(TaskChat.id == task_chat_id).first()
+        
+        if not task_chat:
+            return None
+        
+        # 构造返回数据
+        result = {
+            # TaskChat 信息
+            "id": task_chat.id,
+            "task_id": task_chat.task_id,
+            "chat_id": task_chat.chat_id,
+            "annotation_status": task_chat.annotation_status,
+            "annotation_result": task_chat.annotation_result,
+            "annotation_comment": task_chat.annotation_comment,
+            "annotation_data": task_chat.annotation_data,
+            "annotated_by_id": task_chat.annotated_by_id,
+            "annotated_at": task_chat.annotated_at.isoformat() if task_chat.annotated_at else None,
+            "created_at": task_chat.created_at.isoformat(),
+            "updated_at": task_chat.updated_at.isoformat(),
+            
+            # 关联的 Task 信息
+            "task": {
+                "id": task_chat.task.id,
+                "title": task_chat.task.title,
+                "description": task_chat.task.description,
+                "status": task_chat.task.status.value,
+                "priority": task_chat.task.priority.value,
+                "total_chats": task_chat.task.total_chats,
+                "completed_chats": task_chat.task.completed_chats,
+                "completion_rate": task_chat.task.completion_rate,
+                "deadline": task_chat.task.deadline.isoformat() if task_chat.task.deadline else None,
+                "created_by_id": task_chat.task.created_by_id,
+                "assigned_to_id": task_chat.task.assigned_to_id,
+                "is_overdue": task_chat.task.is_overdue,
+                "created_at": task_chat.task.created_at.isoformat(),
+                "updated_at": task_chat.task.updated_at.isoformat(),
+            },
+            
+            # 关联的 Chat 及 Messages 信息
+            "chat": {
+                "id": task_chat.chat.id,
+                "title": task_chat.chat.title,
+                "user_id": task_chat.chat.user_id,
+                "created_at": task_chat.chat.created_at.isoformat(),
+                "updated_at": task_chat.chat.updated_at.isoformat(),
+                "messages": [
+                    {
+                        "id": message.id,
+                        "role": message.role,
+                        "content": message.content,
+                        "chat_id": message.chat_id,
+                        "meta_data": message.meta_data,
+                        "audit_status": message.audit_status,
+                        "is_flagged": message.is_flagged,
+                        "created_at": message.created_at.isoformat(),
+                        "updated_at": message.updated_at.isoformat(),
+                        "audits": [
+                            {
+                                "id": audit.id,
+                                "message_id": audit.message_id,
+                                "annotator_id": audit.annotator_id,
+                                "status": audit.status,
+                                "comment": audit.comment,
+                                "annotation_data": audit.annotation_data,
+                                "created_at": audit.created_at.isoformat(),
+                                "updated_at": audit.updated_at.isoformat(),
+                            }
+                            for audit in message.audits
+                        ]
+                    }
+                    for message in task_chat.chat.messages
+                ],
+                "message_count": len(task_chat.chat.messages)
+            },
+            
+            # 方便访问的字段
+            "chat_title": task_chat.chat.title,
+            "chat_message_count": len(task_chat.chat.messages),
+        }
+        
+        return result
     
     def get_task_stats(self, db: Session, user_id: Optional[str] = None) -> Dict[str, Any]:
         """

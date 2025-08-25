@@ -33,7 +33,8 @@ async def audit_message(
         message_id=message_id,
         annotator_id=current_user.id,
         status=audit_data.status,
-        comment=audit_data.comment
+        comment=audit_data.comment,
+        annotation_data=audit_data.annotation_data
     )
     
     # 更新消息的审核状态

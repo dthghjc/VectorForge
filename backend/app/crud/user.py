@@ -176,13 +176,14 @@ class UserCRUD:
 class MessageAuditCRUD:
     
     @staticmethod
-    def create_audit(db: Session, message_id: str, annotator_id: str, status: str, comment: Optional[str] = None) -> MessageAudit:
-        """创建审核记录"""
+    def create_audit(db: Session, message_id: str, annotator_id: str, status: str, comment: Optional[str] = None, annotation_data: Optional[dict] = None) -> MessageAudit:
+        """创建审核记录（支持 annotation_data JSON 字段）"""
         audit = MessageAudit(
             message_id=message_id,
             annotator_id=annotator_id,
             status=status,
-            comment=comment
+            comment=comment,
+            annotation_data=annotation_data
         )
         db.add(audit)
         db.commit()

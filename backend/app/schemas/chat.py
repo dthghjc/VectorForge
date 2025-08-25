@@ -72,9 +72,9 @@ class ChatWithMessagesResponse(ChatBase):
 
 # === 审核相关 ===
 class MessageAuditCreate(BaseModel):
-    message_id: str
     status: str = Field(..., pattern="^(pending|approved|rejected)$")
     comment: Optional[str] = None
+    annotation_data: Optional[dict] = Field(None, description="消息级标注数据JSON")
 
 class MessageAuditResponse(BaseModel):
     id: str
@@ -82,6 +82,7 @@ class MessageAuditResponse(BaseModel):
     annotator_id: str
     status: str
     comment: Optional[str]
+    annotation_data: Optional[dict] = Field(None, description="消息级标注数据JSON")
     created_at: datetime
     updated_at: datetime
 

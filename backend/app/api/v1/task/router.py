@@ -140,15 +140,17 @@ async def assign_task(
     
     return task
 
-@router.get("/{task_id}/chats", response_model=List[TaskChatResponse])
+@router.get("/{task_id}/chats", response_model=dict)
 async def get_task_chats(
     task_id: str,
     annotation_status: Optional[str] = Query(None, description="标注状态: pending/completed/skipped"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页大小"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    获取任务中的对话列表
+    获取任务中的对话列表（分页）
     """
     # 权限检查
     task = task_crud.get_task_basic_by_id(db, task_id)
@@ -159,37 +161,39 @@ async def get_task_chats(
         if task.created_by_id != current_user.id and task.assigned_to_id != current_user.id:
             raise APIExceptions.forbidden("无权访问此任务")
     
-    task_chats = task_crud.get_task_chats(db, task_id, annotation_status)
+    # 使用新的分页方法
+    result = task_crud.get_task_chats_paginated(
+        db, task_id, annotation_status, page, page_size
+    )
     
-    # 如果没有task_chats，直接返回空列表
-    if not task_chats:
-        return task_chats
+    return result
+
+@router.get("/{task_id}/chats/{task_chat_id}/detail", response_model=dict)
+async def get_task_chat_detail(
+    task_id: str,
+    task_chat_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取 TaskChat 详情，包含关联的 Chat 和 Messages 数据
+    用于标注工作区
+    """
+    # 权限检查
+    task = task_crud.get_task_basic_by_id(db, task_id)
+    if not task:
+        raise APIExceptions.not_found("任务不存在")
     
-    # 一次性查询所有相关对话的消息数量，避免N+1查询
-    from sqlalchemy import func
-    chat_ids = [tc.chat_id for tc in task_chats if tc.chat_id]
+    if not current_user.is_superuser:
+        if task.created_by_id != current_user.id and task.assigned_to_id != current_user.id:
+            raise APIExceptions.forbidden("无权访问此任务")
     
-    if chat_ids:
-        # 使用聚合查询一次性获取所有对话的消息数量
-        message_counts = dict(
-            db.query(
-                Message.chat_id,
-                func.count(Message.id).label('message_count')
-            ).filter(
-                Message.chat_id.in_(chat_ids)
-            ).group_by(Message.chat_id).all()
-        )
-    else:
-        message_counts = {}
+    # 获取 TaskChat 详情
+    task_chat_detail = task_crud.get_task_chat_detail(db, task_chat_id)
+    if not task_chat_detail:
+        raise APIExceptions.not_found("任务对话不存在")
     
-    # 添加对话信息
-    for task_chat in task_chats:
-        if task_chat.chat:
-            task_chat.chat_title = task_chat.chat.title
-            # 从预查询的结果中获取消息数量
-            task_chat.chat_message_count = message_counts.get(task_chat.chat_id, 0)
-    
-    return task_chats
+    return task_chat_detail
 
 @router.post("/{task_id}/chats/{task_chat_id}/annotate", response_model=TaskChatResponse)
 async def annotate_task_chat(
@@ -200,7 +204,7 @@ async def annotate_task_chat(
     current_user: User = Depends(get_current_user)
 ):
     """
-    标注任务中的对话
+    标注任务中的对话（支持 annotation_data JSON 字段）
     只有分配给任务的标注员可以进行标注
     """
     # 权限检查
@@ -216,9 +220,13 @@ async def annotate_task_chat(
     if not current_user.can_annotate:
         raise APIExceptions.forbidden("用户没有标注权限")
     
-    task_chat = task_crud.annotate_chat(
-        db, task_chat_id, annotation.annotation_result.value, 
-        annotation.annotation_comment, current_user.id
+    task_chat = task_crud.annotate_chat_with_data(
+        db=db,
+        task_chat_id=task_chat_id,
+        annotation_result=annotation.annotation_result,
+        annotation_comment=annotation.annotation_comment,
+        annotation_data=annotation.annotation_data,
+        annotated_by_id=current_user.id
     )
     
     if not task_chat:

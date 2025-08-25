@@ -60,6 +60,7 @@ class TaskAssign(BaseModel):
 class TaskChatAnnotate(BaseModel):
     annotation_result: AnnotationResultEnum = Field(..., description="标注结果")
     annotation_comment: Optional[str] = Field(None, description="标注备注")
+    annotation_data: Optional[Dict[str, Any]] = Field(None, description="Chat级别标注数据JSON")
 
 # 任务对话响应 Schema
 class TaskChatResponse(BaseModel):
