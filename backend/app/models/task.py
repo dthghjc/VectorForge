@@ -104,6 +104,9 @@ class TaskChat(Base, TimestampMixin):
     annotated_by_id = Column(String(36), ForeignKey('users.id'), nullable=True)
     annotated_at = Column(DateTime, nullable=True, comment="标注时间")
     
+    # 完整标注数据 JSON 存储
+    annotation_data = Column(JSON, nullable=True, comment="完整标注数据JSON: intent_category, completeness, overall_satisfaction, general_notes等")
+    
     # 关系映射
     task = relationship("AnnotationTask", back_populates="task_chats")
     chat = relationship("Chat")

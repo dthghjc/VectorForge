@@ -78,6 +78,9 @@ class MessageAudit(Base, TimestampMixin):
     status = Column(String(20), nullable=False, comment="pending/approved/rejected")
     comment = Column(Text, nullable=True, comment="审核意见")
     
+    # 消息级标注数据 JSON 存储
+    annotation_data = Column(JSON, nullable=True, comment="消息级标注数据JSON: relevance, fluency, accuracy, compliance等")
+    
     # 关系映射
     annotator = relationship("User", back_populates="audit_records")
     message = relationship("Message", back_populates="audits")
