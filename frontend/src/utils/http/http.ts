@@ -4,7 +4,7 @@ import { store, type RootState } from "../../store";
 
 const http: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 15000 // 增加到15秒，为删除等耗时操作留出足够时间
+    timeout: 60000 // 增加到60秒，解决标注保存超时问题
 })
 
 // 不需要token的API白名单

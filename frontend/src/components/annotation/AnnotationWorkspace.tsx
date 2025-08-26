@@ -241,6 +241,7 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({
             <div style={{ flex: '1 1 50%', minWidth: '400px' }}>
               <MessageAnnotationPanel 
                 message={message}
+                taskChatDetail={taskChatDetail}
                 style={{ height: '100%' }}
               />
             </div>

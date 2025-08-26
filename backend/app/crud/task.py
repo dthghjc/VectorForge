@@ -652,6 +652,57 @@ class TaskCRUD:
             new_value=new_value
         )
         db.add(log)
+    
+    def annotate_message(
+        self,
+        db: Session,
+        message_id: str,
+        annotation_data: Dict[str, Any],
+        annotated_by_id: str
+    ) -> Optional[Any]:
+        """保存消息级别标注"""
+        from app.models.user import MessageAudit
+        from datetime import datetime
+        
+        print(f"=== CRUD保存消息标注 ===")
+        print(f"Message ID: {message_id}")
+        print(f"Annotated By: {annotated_by_id}")
+        print(f"Annotation Data: {annotation_data}")
+        print("=" * 30)
+        
+        # 检查是否已存在该用户对该消息的标注
+        existing_audit = db.query(MessageAudit).filter(
+            MessageAudit.message_id == message_id,
+            MessageAudit.annotator_id == annotated_by_id
+        ).first()
+        
+        if existing_audit:
+            # 更新现有标注
+            print(f"更新现有标注记录: {existing_audit.id}")
+            existing_audit.annotation_data = annotation_data
+            existing_audit.updated_at = datetime.now()
+            db.commit()
+            db.refresh(existing_audit)
+            print(f"✅ 标注更新成功: {existing_audit.id}")
+            return existing_audit
+        else:
+            # 创建新标注记录
+            print("创建新标注记录...")
+            message_audit = MessageAudit(
+                message_id=message_id,
+                annotator_id=annotated_by_id,
+                status='completed',
+                annotation_data=annotation_data,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            db.add(message_audit)
+            print(f"记录已添加到session，准备提交...")
+            db.commit()
+            print(f"✅ 数据库提交成功")
+            db.refresh(message_audit)
+            print(f"✅ 标注创建成功，ID: {message_audit.id}")
+            return message_audit
 
 # 创建全局实例
 task_crud = TaskCRUD() 

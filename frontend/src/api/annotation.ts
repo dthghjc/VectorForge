@@ -124,6 +124,31 @@ export const annotateChat = (
   return post(`/api/v1/tasks/${taskId}/chats/${taskChatId}/annotate`, annotationData).then(res => res.data);
 };
 
+/**
+ * 标注消息（Message 级别）
+ */
+export const annotateMessage = (
+  taskId: string,
+  messageId: string,
+  annotationData: any
+): Promise<{ success: boolean; message: string }> => {
+  console.log('🔥 annotateMessage API函数被调用');
+  console.log('URL:', `/api/v1/tasks/${taskId}/messages/${messageId}/annotate`);
+  console.log('Data:', annotationData);
+  
+  return post(`/api/v1/tasks/${taskId}/messages/${messageId}/annotate`, annotationData).then(res => {
+    console.log('🔥 API响应:', res);
+    if (Array.isArray(res)) {
+      return res[0] || { success: true, message: '消息标注保存成功' };
+    } else {
+      return res.data || res;
+    }
+  }).catch(error => {
+    console.error('🔥 API调用失败:', error);
+    throw error;
+  });
+};
+
 
 
 // ============= 批量操作 API =============

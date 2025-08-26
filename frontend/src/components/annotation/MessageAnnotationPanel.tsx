@@ -26,9 +26,11 @@ import {
 import type { 
   Message, 
   MessageAnnotationForm,
-  RAGRecallData 
+  RAGRecallData,
+  TaskChatDetail 
 } from '../../types/annotation';
 import { TONE_AND_STYLE_OPTIONS, VIOLATION_TYPE_OPTIONS } from '../../types/annotation';
+import { annotateMessage } from '../../api/annotation';
 
 
 const { Text } = Typography;
@@ -40,6 +42,8 @@ const { Option } = Select;
 interface MessageAnnotationPanelProps {
   /** 要标注的消息 */
   message: Message;
+  /** TaskChat 详情（用于获取 task_id） */
+  taskChatDetail: TaskChatDetail;
   /** 自定义样式 */
   style?: React.CSSProperties;
 }
@@ -98,6 +102,7 @@ const RAG_SUPPORT_OPTIONS = [
 
 const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
   message,
+  taskChatDetail,
   style,
 }) => {
   
@@ -146,6 +151,10 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
    * 保存消息标注
    */
   const handleSave = async () => {
+    console.log('🚀 handleSave函数被调用了！');
+    console.log('taskChatDetail:', taskChatDetail);
+    console.log('message:', message);
+    
     try {
       setSaving(true);
       
@@ -154,10 +163,17 @@ const MessageAnnotationPanel: React.FC<MessageAnnotationPanelProps> = ({
       const values = form.getFieldsValue();
       
       console.log('保存消息标注数据:', values);
+      console.log('Task ID:', taskChatDetail.task.id);
+      console.log('Message ID:', message.id);
       
-      // TODO: 实现消息级别标注保存逻辑
-      // 目前只在本地保存，需要配合后端API实现
+      // 调用API保存消息级别标注
+      const result = await annotateMessage(
+        taskChatDetail.task.id,
+        message.id,
+        values // 直接传递表单数据作为annotation_data
+      );
       
+      console.log('API调用结果:', result);
       antMessage.success('消息标注保存成功');
       
     } catch (error) {

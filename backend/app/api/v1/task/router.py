@@ -6,7 +6,7 @@ from sqlalchemy import func, exists, case, text
 from app.db.session import get_db
 from app.models.user import User
 from app.models.chat import Chat, Message
-from app.models.task import TaskChat
+from app.models.task import TaskChat, AnnotationTask
 from app.crud.task import task_crud
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskAssign, TaskChatAnnotate,
@@ -398,3 +398,64 @@ async def get_pending_chats(
         "total": total_count,
         "items": items
     }
+
+@router.post("/{task_id}/messages/{message_id}/annotate")
+async def annotate_message(
+    task_id: str,
+    message_id: str,
+    annotation_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    标注消息（Message 级别）
+    保存标注数据到 message_audits.annotation_data
+    """
+    print(f"=== Message标注API调用 ===")
+    print(f"Task ID: {task_id}")
+    print(f"Message ID: {message_id}")
+    print(f"User ID: {current_user.id}")
+    print(f"Annotation Data: {annotation_data}")
+    print("=" * 30)
+    # 权限检查
+    task = task_crud.get_task_basic_by_id(db, task_id)
+    if not task:
+        raise APIExceptions.not_found("任务不存在")
+    
+    # 只有分配给任务的用户可以标注（管理员也可以）
+    if not current_user.is_superuser and task.assigned_to_id != current_user.id:
+        raise APIExceptions.forbidden("只有分配给任务的标注员可以进行标注")
+    
+    # 检查用户是否有标注权限
+    if not current_user.can_annotate:
+        raise APIExceptions.forbidden("用户没有标注权限")
+    
+    # 检查message是否属于该任务
+    # 首先检查message是否存在
+    message = db.query(Message).filter(Message.id == message_id).first()
+    if not message:
+        raise APIExceptions.not_found("消息不存在")
+    
+    # 检查该消息的chat是否在任务中
+    task_chat = db.query(TaskChat).filter(
+        TaskChat.task_id == task_id,
+        TaskChat.chat_id == message.chat_id
+    ).first()
+    
+    if not task_chat:
+        raise APIExceptions.not_found("消息不属于该任务")
+        
+    print(f"找到TaskChat: {task_chat.id}, Chat ID: {task_chat.chat_id}")
+    
+    # 调用CRUD方法保存message标注
+    message_audit = task_crud.annotate_message(
+        db=db,
+        message_id=message_id,
+        annotation_data=annotation_data,
+        annotated_by_id=current_user.id
+    )
+    
+    if not message_audit:
+        raise APIExceptions.internal_error("保存消息标注失败")
+    
+    return {"success": True, "message": "消息标注保存成功"}
